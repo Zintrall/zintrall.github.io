@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
         players: [],
         opponent: '',
         teammate: '',
-        deckHero: '',
-        deckString: '',
+        firstPlayer: '',
+        secondPlayer: '',
         activeTab: 'matchups'
     };
 
@@ -64,13 +64,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const opponentSelector = document.getElementById('opponentSelector');
     const teammateSelector = document.getElementById('teammateSelector');
     const playerList = document.getElementById('playerList');
-    const opponentSelect = document.getElementById('opponentSelect');
-    const teammateSelect = document.getElementById('teammateSelect');
+    const opponentResults = document.getElementById('opponentResults');
+    const teammateResults = document.getElementById('teammateResults');
     const playerSearch = document.getElementById('playerSearch');
     const opponentSearch = document.getElementById('opponentSearch');
     const teammateSearch = document.getElementById('teammateSearch');
-    const deckHero = document.getElementById('deckHero');
-    const deckString = document.getElementById('deckString');
+    const firstPlayerSearch = document.getElementById('firstPlayerSearch');
+    const secondPlayerSearch = document.getElementById('secondPlayerSearch');
+    const firstPlayerResults = document.getElementById('firstPlayerResults');
+    const secondPlayerResults = document.getElementById('secondPlayerResults');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const loadingIndicator = document.getElementById('loadingIndicator');
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -82,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const playerGamesTable = document.getElementById('playerGamesTable');
     const showMoreButtons = document.querySelectorAll('.show-more-btn');
     const showLessButtons = document.querySelectorAll('.show-less-btn');
-    const deckAnalysisContent = document.getElementById('deckAnalysisContent');
+    const pvpAnalysisContent = document.getElementById('pvpAnalysisContent');
     const opponentAnalysis = document.getElementById('opponentAnalysis');
     const teammateAnalysis = document.getElementById('teammateAnalysis');
     const selectedOpponentSpan = document.getElementById('selectedOpponent');
@@ -97,7 +99,6 @@ document.addEventListener('DOMContentLoaded', function() {
         await loadPlayerNames();
         await loadPatches();
         await loadTournaments();
-        populateHeroDropdown();
         setupEventListeners();
         populateUIElements();
     }
@@ -146,34 +147,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Populate the hero dropdown for deck search
-    function populateHeroDropdown() {
-        // Clear existing options except the first one
-        while (deckHero.options.length > 1) {
-            deckHero.remove(1);
-        }
-
-        // Add zombie heroes
-        const zombieOptgroup = document.createElement('optgroup');
-        zombieOptgroup.label = 'Zombie Heroes';
-        zombieHeroes.forEach(hero => {
-            const option = document.createElement('option');
-            option.value = hero.code;
-            option.textContent = hero.fullName;
-            zombieOptgroup.appendChild(option);
-        });
-        deckHero.appendChild(zombieOptgroup);
-
-        // Add plant heroes
-        const plantOptgroup = document.createElement('optgroup');
-        plantOptgroup.label = 'Plant Heroes';
-        plantHeroes.forEach(hero => {
-            const option = document.createElement('option');
-            option.value = hero.code;
-            option.textContent = hero.fullName;
-            plantOptgroup.appendChild(option);
-        });
-        deckHero.appendChild(plantOptgroup);
+    // Capitalize the first letter of each word in a name
+    function capitalizePlayerName(name) {
+        return name.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
     }
 
     // Setup all event listeners
@@ -188,9 +166,11 @@ document.addEventListener('DOMContentLoaded', function() {
         teammateBtn.addEventListener('click', () => togglePlayerSelectors('teammate'));
         
         // Search functionality
-        playerSearch.addEventListener('input', () => filterPlayers(playerSearch.value, playerList));
-        opponentSearch.addEventListener('input', () => filterPlayers(opponentSearch.value, opponentSelect));
-        teammateSearch.addEventListener('input', () => filterPlayers(teammateSearch.value, teammateSelect));
+        playerSearch.addEventListener('input', () => filterPlayers(playerSearch.value, playerList, 'checkbox'));
+        opponentSearch.addEventListener('input', () => filterPlayers(opponentSearch.value, opponentResults, 'clickable'));
+        teammateSearch.addEventListener('input', () => filterPlayers(teammateSearch.value, teammateResults, 'clickable'));
+        firstPlayerSearch.addEventListener('input', () => filterPlayers(firstPlayerSearch.value, firstPlayerResults, 'clickable'));
+        secondPlayerSearch.addEventListener('input', () => filterPlayers(secondPlayerSearch.value, secondPlayerResults, 'clickable'));
         
         // Apply date range
         document.getElementById('applyDateBtn').addEventListener('click', applyDateRange);
@@ -200,15 +180,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Tab switching
         tabButtons.forEach(button => {
-            button.addEventListener('click', () => switchTab(button.dataset.tab));
+            button.addEventListener('click', () => {
+                switchTab(button.dataset.tab);
+                analyzeData(); // Automatically analyze when switching tabs
+            });
         });
         
         // Show more/less buttons
         setupShowMoreLessButtons();
-        
-        // Opponent and teammate selection
-        opponentSelect.addEventListener('change', handleOpponentChange);
-        teammateSelect.addEventListener('change', handleTeammateChange);
     }
 
     // Populate UI elements with initial data
@@ -262,65 +241,151 @@ document.addEventListener('DOMContentLoaded', function() {
     function populatePlayerLists(filter = '') {
         // Clear current lists
         playerList.innerHTML = '';
-        opponentSelect.innerHTML = '<option value="">Select an opponent</option>';
-        teammateSelect.innerHTML = '<option value="">Select a teammate</option>';
+        opponentResults.innerHTML = '';
+        teammateResults.innerHTML = '';
+        firstPlayerResults.innerHTML = '';
+        secondPlayerResults.innerHTML = '';
         
         // Filter players if needed
         const filteredPlayers = filter ? 
             allPlayers.filter(player => player.toLowerCase().includes(filter.toLowerCase())) : 
             allPlayers;
         
-        // Add to checkbox list
-        filteredPlayers.slice(0, 20).forEach(player => {
-            const item = createCheckboxItem(player, player, 'player');
+        // Add to checkbox list for player selection
+        filteredPlayers.forEach(player => {
+            const displayName = capitalizePlayerName(player);
+            const item = createCheckboxItem(player, displayName, 'player');
             playerList.appendChild(item);
         });
         
-        // Add to dropdown selects
+        // Add clickable items to opponent results
         filteredPlayers.forEach(player => {
-            const opponentOption = document.createElement('option');
-            opponentOption.value = player;
-            opponentOption.textContent = player;
-            opponentSelect.appendChild(opponentOption);
-            
-            const teammateOption = document.createElement('option');
-            teammateOption.value = player;
-            teammateOption.textContent = player;
-            teammateSelect.appendChild(teammateOption);
+            const displayName = capitalizePlayerName(player);
+            const item = document.createElement('div');
+            item.className = 'player-result-item';
+            item.textContent = displayName;
+            item.dataset.value = player;
+            item.addEventListener('click', () => {
+                handleOpponentSelection(player);
+            });
+            opponentResults.appendChild(item);
+        });
+        
+        // Add clickable items to teammate results
+        filteredPlayers.forEach(player => {
+            const displayName = capitalizePlayerName(player);
+            const item = document.createElement('div');
+            item.className = 'player-result-item';
+            item.textContent = displayName;
+            item.dataset.value = player;
+            item.addEventListener('click', () => {
+                handleTeammateSelection(player);
+            });
+            teammateResults.appendChild(item);
+        });
+        
+        // Add clickable items to first player results
+        filteredPlayers.forEach(player => {
+            const displayName = capitalizePlayerName(player);
+            const item = document.createElement('div');
+            item.className = 'player-result-item';
+            item.textContent = displayName;
+            item.dataset.value = player;
+            item.addEventListener('click', () => {
+                currentSelections.firstPlayer = player;
+                firstPlayerSearch.value = displayName;
+                firstPlayerResults.querySelectorAll('.player-result-item').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                item.classList.add('selected');
+            });
+            firstPlayerResults.appendChild(item);
+        });
+        
+        // Add clickable items to second player results
+        filteredPlayers.forEach(player => {
+            const displayName = capitalizePlayerName(player);
+            const item = document.createElement('div');
+            item.className = 'player-result-item';
+            item.textContent = displayName;
+            item.dataset.value = player;
+            item.addEventListener('click', () => {
+                currentSelections.secondPlayer = player;
+                secondPlayerSearch.value = displayName;
+                secondPlayerResults.querySelectorAll('.player-result-item').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                item.classList.add('selected');
+            });
+            secondPlayerResults.appendChild(item);
         });
     }
 
     // Filter players based on search input
-    function filterPlayers(query, targetElement) {
-        if (targetElement === playerList) {
-            // Clear and repopulate the checkbox list
-            playerList.innerHTML = '';
-            
-            const filteredPlayers = allPlayers.filter(player => 
-                player.toLowerCase().includes(query.toLowerCase())
-            );
-            
-            filteredPlayers.slice(0, 20).forEach(player => {
-                const item = createCheckboxItem(player, player, 'player');
-                playerList.appendChild(item);
-            });
-        } else if (targetElement === opponentSelect || targetElement === teammateSelect) {
-            // Filter options in the dropdown
-            const options = targetElement.options;
-            const firstOption = options[0]; // Save the first "Select..." option
-            
-            targetElement.innerHTML = ''; // Clear all options
-            targetElement.appendChild(firstOption); // Add back the first option
-            
-            const filteredPlayers = allPlayers.filter(player => 
-                player.toLowerCase().includes(query.toLowerCase())
-            );
-            
+    function filterPlayers(query, targetElement, type) {
+        targetElement.innerHTML = '';
+        
+        const filteredPlayers = allPlayers.filter(player => 
+            player.toLowerCase().includes(query.toLowerCase())
+        );
+        
+        if (type === 'checkbox') {
+            // For checkbox list (player selection)
             filteredPlayers.forEach(player => {
-                const option = document.createElement('option');
-                option.value = player;
-                option.textContent = player;
-                targetElement.appendChild(option);
+                const displayName = capitalizePlayerName(player);
+                const item = createCheckboxItem(player, displayName, 'player');
+                targetElement.appendChild(item);
+            });
+        } 
+        else if (type === 'clickable') {
+            // For clickable items (opponent, teammate, pvp)
+            filteredPlayers.forEach(player => {
+                const displayName = capitalizePlayerName(player);
+                const item = document.createElement('div');
+                item.className = 'player-result-item';
+                item.textContent = displayName;
+                item.dataset.value = player;
+                
+                if (targetElement === opponentResults) {
+                    item.addEventListener('click', () => handleOpponentSelection(player));
+                    if (player === currentSelections.opponent) {
+                        item.classList.add('selected');
+                    }
+                } 
+                else if (targetElement === teammateResults) {
+                    item.addEventListener('click', () => handleTeammateSelection(player));
+                    if (player === currentSelections.teammate) {
+                        item.classList.add('selected');
+                    }
+                }
+                else if (targetElement === firstPlayerResults) {
+                    item.addEventListener('click', () => {
+                        currentSelections.firstPlayer = player;
+                        firstPlayerSearch.value = displayName;
+                        firstPlayerResults.querySelectorAll('.player-result-item').forEach(el => {
+                            el.classList.remove('selected');
+                        });
+                        item.classList.add('selected');
+                    });
+                    if (player === currentSelections.firstPlayer) {
+                        item.classList.add('selected');
+                    }
+                }
+                else if (targetElement === secondPlayerResults) {
+                    item.addEventListener('click', () => {
+                        currentSelections.secondPlayer = player;
+                        secondPlayerSearch.value = displayName;
+                        secondPlayerResults.querySelectorAll('.player-result-item').forEach(el => {
+                            el.classList.remove('selected');
+                        });
+                        item.classList.add('selected');
+                    });
+                    if (player === currentSelections.secondPlayer) {
+                        item.classList.add('selected');
+                    }
+                }
+                
+                targetElement.appendChild(item);
             });
         }
     }
@@ -410,21 +475,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle opponent selection
-    function handleOpponentChange() {
-        currentSelections.opponent = opponentSelect.value;
-        currentSelections.players = [];
-        console.log('Selected opponent:', currentSelections.opponent);
+    function handleOpponentSelection(player) {
+        currentSelections.opponent = player;
+        opponentSearch.value = capitalizePlayerName(player);
+        
+        // Mark as selected in the UI
+        opponentResults.querySelectorAll('.player-result-item').forEach(item => {
+            item.classList.remove('selected');
+            if (item.dataset.value === player) {
+                item.classList.add('selected');
+            }
+        });
         
         // Clear player checkboxes when an opponent is selected
         const playerCheckboxes = playerList.querySelectorAll('input[type="checkbox"]');
         playerCheckboxes.forEach(cb => {
             cb.checked = false;
         });
+        currentSelections.players = [];
+        
+        console.log('Selected opponent:', currentSelections.opponent);
     }
 
     // Handle teammate selection
-    function handleTeammateChange() {
-        currentSelections.teammate = teammateSelect.value;
+    function handleTeammateSelection(player) {
+        currentSelections.teammate = player;
+        teammateSearch.value = capitalizePlayerName(player);
+        
+        // Mark as selected in the UI
+        teammateResults.querySelectorAll('.player-result-item').forEach(item => {
+            item.classList.remove('selected');
+            if (item.dataset.value === player) {
+                item.classList.add('selected');
+            }
+        });
+        
         console.log('Selected teammate:', currentSelections.teammate);
     }
 
@@ -450,18 +535,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Setup show more/less buttons
     function setupShowMoreLessButtons() {
-        document.getElementById('showMorePlayers').addEventListener('click', () => {
-            showMoreItems(playerList, 'player', 100);
-            document.getElementById('showMorePlayers').classList.add('hidden');
-            document.getElementById('showLessPlayers').classList.remove('hidden');
-        });
-        
-        document.getElementById('showLessPlayers').addEventListener('click', () => {
-            showLessItems(playerList, 'player', 20);
-            document.getElementById('showMorePlayers').classList.remove('hidden');
-            document.getElementById('showLessPlayers').classList.add('hidden');
-        });
-        
         document.getElementById('showMoreZombies').addEventListener('click', () => {
             showAllRows(zombieHeroTable);
             document.getElementById('showMoreZombies').classList.add('hidden');
@@ -508,6 +581,76 @@ document.addEventListener('DOMContentLoaded', function() {
             limitTableRows(playerGamesTable, 10);
             document.getElementById('showMoreActivePlayers').classList.remove('hidden');
             document.getElementById('showLessActivePlayers').classList.add('hidden');
+        });
+        
+        // Opponent analysis show more/less buttons
+        document.getElementById('showMoreOpponentHeroes').addEventListener('click', () => {
+            showMoreCards(opponentHeroes);
+            document.getElementById('showMoreOpponentHeroes').classList.add('hidden');
+            document.getElementById('showLessOpponentHeroes').classList.remove('hidden');
+        });
+        
+        document.getElementById('showLessOpponentHeroes').addEventListener('click', () => {
+            showLessCards(opponentHeroes, 6);
+            document.getElementById('showMoreOpponentHeroes').classList.remove('hidden');
+            document.getElementById('showLessOpponentHeroes').classList.add('hidden');
+        });
+        
+        document.getElementById('showMoreOpponentWeaknesses').addEventListener('click', () => {
+            showMoreCards(opponentWeaknesses);
+            document.getElementById('showMoreOpponentWeaknesses').classList.add('hidden');
+            document.getElementById('showLessOpponentWeaknesses').classList.remove('hidden');
+        });
+        
+        document.getElementById('showLessOpponentWeaknesses').addEventListener('click', () => {
+            showLessCards(opponentWeaknesses, 6);
+            document.getElementById('showMoreOpponentWeaknesses').classList.remove('hidden');
+            document.getElementById('showLessOpponentWeaknesses').classList.add('hidden');
+        });
+        
+        // Teammate analysis show more/less buttons
+        document.getElementById('showMoreTeammateHeroes').addEventListener('click', () => {
+            showMoreCards(teammateHeroes);
+            document.getElementById('showMoreTeammateHeroes').classList.add('hidden');
+            document.getElementById('showLessTeammateHeroes').classList.remove('hidden');
+        });
+        
+        document.getElementById('showLessTeammateHeroes').addEventListener('click', () => {
+            showLessCards(teammateHeroes, 6);
+            document.getElementById('showMoreTeammateHeroes').classList.remove('hidden');
+            document.getElementById('showLessTeammateHeroes').classList.add('hidden');
+        });
+        
+        document.getElementById('showMoreTeammatePlayedHeroes').addEventListener('click', () => {
+            showMoreCards(teammatePlayedHeroes);
+            document.getElementById('showMoreTeammatePlayedHeroes').classList.add('hidden');
+            document.getElementById('showLessTeammatePlayedHeroes').classList.remove('hidden');
+        });
+        
+        document.getElementById('showLessTeammatePlayedHeroes').addEventListener('click', () => {
+            showLessCards(teammatePlayedHeroes, 6);
+            document.getElementById('showMoreTeammatePlayedHeroes').classList.remove('hidden');
+            document.getElementById('showLessTeammatePlayedHeroes').classList.add('hidden');
+        });
+    }
+
+    // Show more cards for hero analysis
+    function showMoreCards(container) {
+        const allCards = container.querySelectorAll('.data-card');
+        allCards.forEach(card => {
+            card.classList.remove('hidden');
+        });
+    }
+    
+    // Show fewer cards for hero analysis
+    function showLessCards(container, count) {
+        const allCards = container.querySelectorAll('.data-card');
+        allCards.forEach((card, index) => {
+            if (index >= count) {
+                card.classList.add('hidden');
+            } else {
+                card.classList.remove('hidden');
+            }
         });
     }
 
@@ -562,15 +705,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Main data analysis function
     async function analyzeData() {
         // Show loading indicator
-        loadingIndicator.classList.remove('hidden');
-        opponentAnalysis.classList.add('hidden');
-        teammateAnalysis.classList.add('hidden');
+        loadingIndicator.classList.add('visible');
         
         try {
-            // Collect current filter selections
-            const hero = deckHero.value;
-            const deckSearchString = deckString.value.toLowerCase();
-            
             // Reset game data
             gameData = [];
             
@@ -588,18 +725,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'players':
                     generatePlayerStats();
                     break;
-                case 'decks':
-                    generateDeckAnalysis(hero, deckSearchString);
+                case 'pvp':
+                    generatePvPAnalysis();
                     break;
             }
             
             // Handle opponent or teammate selection if present
             if (currentSelections.opponent) {
                 generateOpponentAnalysis();
+                teammateAnalysis.classList.add('hidden');
+            } else {
+                opponentAnalysis.classList.add('hidden');
             }
             
             if (currentSelections.teammate) {
                 generateTeammateAnalysis();
+                opponentAnalysis.classList.add('hidden');
+            } else {
+                teammateAnalysis.classList.add('hidden');
             }
             
         } catch (error) {
@@ -607,7 +750,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error analyzing data. Please check the console for details.');
         } finally {
             // Hide loading indicator
-            loadingIndicator.classList.add('hidden');
+            loadingIndicator.classList.remove('visible');
         }
     }
 
@@ -773,19 +916,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         zombieTotalGames += total;
                         
                         if (total === 0) {
-                            return `<td class="matchup-cell">-<span class="games-count">0</span></td>`;
+                            return `<td class="matchup-cell"><span class="cell-top na-text">N/A</span><span class="cell-bottom na-text">N/A</span></td>`;
                         }
                         
-                        const winRate = (matchup.zombieWins / total * 100).toFixed(1);
-                        const colorClass = getWinRateColorClass(winRate);
+                        // Calculate win rates from both perspectives
+                        const zombieWinRate = (matchup.zombieWins / total * 100).toFixed(1);
+                        const plantWinRate = (matchup.plantWins / total * 100).toFixed(1);
                         
-                        return `<td class="matchup-cell ${colorClass}" title="${zombie.fullName} vs ${plant.fullName}: ${matchup.zombieWins} wins in ${total} games">
-                            ${winRate}%<span class="games-count">${total}</span>
+                        const zombieColorClass = getWinRateColorClass(zombieWinRate);
+                        const plantColorClass = getWinRateColorClass(plantWinRate);
+                        
+                        return `<td class="matchup-cell" title="${plant.fullName} vs ${zombie.fullName}: ${total} games">
+                            <span class="cell-top ${plantColorClass}">${plantWinRate}%</span>
+                            <span class="cell-bottom ${zombieColorClass}">${zombieWinRate}%</span>
                         </td>`;
                     }).join('')}
-                    <td class="matchup-cell ${getWinRateColorClass((zombieTotalWins / zombieTotalGames * 100) || 0)}">
-                        ${zombieTotalGames > 0 ? (zombieTotalWins / zombieTotalGames * 100).toFixed(1) + '%' : '-'}
-                        <span class="games-count">${zombieTotalGames}</span>
+                    <td class="matchup-cell">
+                        <span class="cell-top">${zombieTotalGames > 0 ? ((zombieTotalGames - zombieTotalWins) / zombieTotalGames * 100).toFixed(1) + '%' : 'N/A'}</span>
+                        <span class="cell-bottom">${zombieTotalGames > 0 ? (zombieTotalWins / zombieTotalGames * 100).toFixed(1) + '%' : 'N/A'}</span>
                     </td>
                 </tr>
             `;
@@ -798,21 +946,21 @@ document.addEventListener('DOMContentLoaded', function() {
             <th>Total</th>`;
             
         plantHeroes.forEach(plant => {
-            let plantTotalLosses = 0;
+            let plantTotalWins = 0;
             let plantTotalGames = 0;
             
             zombieHeroes.forEach(zombie => {
                 const matchup = matchupGrid[zombie.code][plant.code];
-                plantTotalLosses += matchup.zombieWins;
+                plantTotalWins += matchup.plantWins;
                 plantTotalGames += matchup.total;
             });
             
-            const winRate = plantTotalGames > 0 ? (plantTotalLosses / plantTotalGames * 100).toFixed(1) : 0;
-            const colorClass = getWinRateColorClass(winRate);
+            const plantWinRate = plantTotalGames > 0 ? (plantTotalWins / plantTotalGames * 100).toFixed(1) : 0;
+            const zombieWinRate = plantTotalGames > 0 ? ((plantTotalGames - plantTotalWins) / plantTotalGames * 100).toFixed(1) : 0;
             
-            totalRowHTML += `<td class="matchup-cell ${colorClass}">
-                ${plantTotalGames > 0 ? winRate + '%' : '-'}
-                <span class="games-count">${plantTotalGames}</span>
+            totalRowHTML += `<td class="matchup-cell">
+                <span class="cell-top">${plantTotalGames > 0 ? plantWinRate + '%' : 'N/A'}</span>
+                <span class="cell-bottom">${plantTotalGames > 0 ? zombieWinRate + '%' : 'N/A'}</span>
             </td>`;
         });
         
@@ -828,12 +976,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
-        const overallWinRate = overallGames > 0 ? (overallZombieWins / overallGames * 100).toFixed(1) : 0;
-        const overallColorClass = getWinRateColorClass(overallWinRate);
+        const overallZombieWinRate = overallGames > 0 ? (overallZombieWins / overallGames * 100).toFixed(1) : 0;
+        const overallPlantWinRate = overallGames > 0 ? ((overallGames - overallZombieWins) / overallGames * 100).toFixed(1) : 0;
         
-        totalRowHTML += `<td class="matchup-cell ${overallColorClass}">
-            ${overallGames > 0 ? overallWinRate + '%' : '-'}
-            <span class="games-count">${overallGames}</span>
+        totalRowHTML += `<td class="matchup-cell">
+            <span class="cell-top">${overallGames > 0 ? overallPlantWinRate + '%' : 'N/A'}</span>
+            <span class="cell-bottom">${overallGames > 0 ? overallZombieWinRate + '%' : 'N/A'}</span>
         </td>`;
         
         totalRowHTML += `</tr>`;
@@ -966,6 +1114,41 @@ document.addEventListener('DOMContentLoaded', function() {
             stats.winRate = stats.total > 0 ? (stats.wins / stats.total) * 100 : 0;
         });
         
+        // If a single player is selected, display them separately
+        let selectedPlayerHTML = '';
+        const selectedPlayerStats = currentSelections.players.length === 1 ? 
+            playerStats[currentSelections.players[0]] : null;
+        
+        if (selectedPlayerStats) {
+            const playerName = capitalizePlayerName(currentSelections.players[0]);
+            selectedPlayerHTML = `
+                <div class="selected-player-card">
+                    <h3>${playerName}</h3>
+                    <div class="selected-player-stats">
+                        <div class="selected-stat-item">
+                            <div class="selected-stat-label">Games</div>
+                            <div class="selected-stat-value">${selectedPlayerStats.total}</div>
+                        </div>
+                        <div class="selected-stat-item">
+                            <div class="selected-stat-label">Wins</div>
+                            <div class="selected-stat-value">${selectedPlayerStats.wins}</div>
+                        </div>
+                        <div class="selected-stat-item">
+                            <div class="selected-stat-label">Losses</div>
+                            <div class="selected-stat-value">${selectedPlayerStats.losses}</div>
+                        </div>
+                        <div class="selected-stat-item">
+                            <div class="selected-stat-label">Win Rate</div>
+                            <div class="selected-stat-value">${selectedPlayerStats.winRate.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove the selected player from the stats object for the tables
+            delete playerStats[currentSelections.players[0]];
+        }
+        
         // Prepare sorted player lists
         const players = Object.keys(playerStats).map(player => ({
             name: player,
@@ -980,17 +1163,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // Sort by games played
         const byGamesPlayed = [...players].sort((a, b) => b.stats.total - a.stats.total);
         
+        // Insert the selected player's stats if exists
+        if (selectedPlayerHTML) {
+            const container = document.createElement('div');
+            container.innerHTML = selectedPlayerHTML;
+            playerWinRateTable.parentNode.insertBefore(container, playerWinRateTable);
+        }
+        
         // Generate win rate table
         let winRateHTML = '';
         byWinRate.forEach((player, index) => {
             const { name, stats } = player;
+            const displayName = capitalizePlayerName(name);
             const winRateClass = getWinRateColorClass(stats.winRate);
             const hidden = index >= 10 ? 'class="hidden"' : '';
             
             winRateHTML += `
                 <tr ${hidden}>
                     <td>${index + 1}</td>
-                    <td>${name}</td>
+                    <td>${displayName}</td>
                     <td>${stats.total}</td>
                     <td>${stats.wins}</td>
                     <td class="win-rate-cell ${winRateClass}">${stats.winRate.toFixed(1)}%</td>
@@ -998,19 +1189,20 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         });
         
-        playerWinRateTable.querySelector('tbody').innerHTML = winRateHTML;
+        playerWinRateTable.querySelector('tbody').innerHTML = winRateHTML || '<tr><td colspan="5" class="empty-state">No qualifying players (minimum 5 games)</td></tr>';
         
         // Generate games played table
         let gamesPlayedHTML = '';
         byGamesPlayed.forEach((player, index) => {
             const { name, stats } = player;
+            const displayName = capitalizePlayerName(name);
             const winRateClass = getWinRateColorClass(stats.winRate);
             const hidden = index >= 10 ? 'class="hidden"' : '';
             
             gamesPlayedHTML += `
                 <tr ${hidden}>
                     <td>${index + 1}</td>
-                    <td>${name}</td>
+                    <td>${displayName}</td>
                     <td>${stats.total}</td>
                     <td>${stats.wins}</td>
                     <td class="win-rate-cell ${winRateClass}">${stats.winRate.toFixed(1)}%</td>
@@ -1018,97 +1210,73 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         });
         
-        playerGamesTable.querySelector('tbody').innerHTML = gamesPlayedHTML;
+        playerGamesTable.querySelector('tbody').innerHTML = gamesPlayedHTML || '<tr><td colspan="5" class="empty-state">No players found</td></tr>';
     }
 
-    // Generate deck analysis for a specific player and hero/deck string
-    function generateDeckAnalysis(hero, deckString) {
-        // If no player is selected or there's no deck search criteria, show a message
-        if (currentSelections.players.length === 0 && !currentSelections.opponent) {
-            deckAnalysisContent.innerHTML = `
-                <p class="empty-state">Please select at least one player and specify deck search criteria.</p>
+    // Generate player vs player analysis
+    function generatePvPAnalysis() {
+        // Check if both players are selected
+        if (!currentSelections.firstPlayer || !currentSelections.secondPlayer) {
+            pvpAnalysisContent.innerHTML = `
+                <p class="empty-state">Please select both players to see head-to-head statistics.</p>
             `;
             return;
         }
         
-        // Get the relevant player(s)
-        const players = currentSelections.players.length > 0 ? 
-            currentSelections.players : [currentSelections.opponent];
+        const player1 = currentSelections.firstPlayer;
+        const player2 = currentSelections.secondPlayer;
+        const displayName1 = capitalizePlayerName(player1);
+        const displayName2 = capitalizePlayerName(player2);
         
-        // Filter games by player and hero if specified
-        let relevantGames = gameData.filter(game => 
-            (players.includes(game.winner) || players.includes(game.loser))
+        // Find all games between these two players
+        const headToHeadGames = gameData.filter(game => 
+            (game.winner === player1 && game.loser === player2) || 
+            (game.winner === player2 && game.loser === player1)
         );
         
-        if (hero) {
-            relevantGames = relevantGames.filter(game => 
-                (players.includes(game.winner) && game.winningHero === hero) || 
-                (players.includes(game.loser) && game.losingHero === hero)
-            );
-        }
-        
-        if (relevantGames.length === 0) {
-            deckAnalysisContent.innerHTML = `
-                <p class="empty-state">No games found with the selected criteria.</p>
+        if (headToHeadGames.length === 0) {
+            pvpAnalysisContent.innerHTML = `
+                <p class="empty-state">No games found between ${displayName1} and ${displayName2}.</p>
             `;
             return;
         }
         
-        // Analyze deck performance
-        const deckPerformance = {
-            withString: { wins: 0, losses: 0, total: 0 },
-            withoutString: { wins: 0, losses: 0, total: 0 }
-        };
+        // Calculate stats
+        const player1Wins = headToHeadGames.filter(game => game.winner === player1).length;
+        const player2Wins = headToHeadGames.filter(game => game.winner === player2).length;
+        const player1WinRate = (player1Wins / headToHeadGames.length * 100).toFixed(1);
+        const player2WinRate = (player2Wins / headToHeadGames.length * 100).toFixed(1);
         
-        relevantGames.forEach(game => {
-            const isPlayerWinner = players.includes(game.winner);
-            const deck = isPlayerWinner ? game.winningDeck : game.losingDeck;
-            
-            if (deckString && deck.toLowerCase().includes(deckString.toLowerCase())) {
-                if (isPlayerWinner) {
-                    deckPerformance.withString.wins++;
-                } else {
-                    deckPerformance.withString.losses++;
-                }
-                deckPerformance.withString.total++;
+        // Get hero usage for each player
+        const player1Heroes = {};
+        const player2Heroes = {};
+        
+        headToHeadGames.forEach(game => {
+            if (game.winner === player1) {
+                if (!player1Heroes[game.winningHero]) player1Heroes[game.winningHero] = { wins: 0, losses: 0 };
+                player1Heroes[game.winningHero].wins++;
+                
+                if (!player2Heroes[game.losingHero]) player2Heroes[game.losingHero] = { wins: 0, losses: 0 };
+                player2Heroes[game.losingHero].losses++;
             } else {
-                if (isPlayerWinner) {
-                    deckPerformance.withoutString.wins++;
-                } else {
-                    deckPerformance.withoutString.losses++;
-                }
-                deckPerformance.withoutString.total++;
+                if (!player2Heroes[game.winningHero]) player2Heroes[game.winningHero] = { wins: 0, losses: 0 };
+                player2Heroes[game.winningHero].wins++;
+                
+                if (!player1Heroes[game.losingHero]) player1Heroes[game.losingHero] = { wins: 0, losses: 0 };
+                player1Heroes[game.losingHero].losses++;
             }
         });
         
-        // Calculate win rates
-        const withStringWinRate = deckPerformance.withString.total > 0 ?
-            (deckPerformance.withString.wins / deckPerformance.withString.total * 100).toFixed(1) : '0.0';
-            
-        const withoutStringWinRate = deckPerformance.withoutString.total > 0 ?
-            (deckPerformance.withoutString.wins / deckPerformance.withoutString.total * 100).toFixed(1) : '0.0';
-        
-        // Get hero name if specified
-        let heroName = "Any Hero";
-        if (hero) {
-            const foundZombieHero = zombieHeroes.find(h => h.code === hero);
-            const foundPlantHero = plantHeroes.find(h => h.code === hero);
-            if (foundZombieHero) heroName = foundZombieHero.fullName;
-            if (foundPlantHero) heroName = foundPlantHero.fullName;
-        }
-        
         // Generate HTML
         let analysisHTML = `
-            <div class="deck-analysis">
-                <h4>Deck Analysis for ${players.join(', ')}</h4>
-                <p>Hero: ${heroName}</p>
-                <p>Deck String: ${deckString || 'None'}</p>
+            <div class="pvp-analysis">
+                <h4>${displayName1} vs ${displayName2} - Head to Head</h4>
                 
-                <div class="deck-stats">
+                <div class="pvp-stats">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Deck Type</th>
+                                <th>Player</th>
                                 <th>Games</th>
                                 <th>Wins</th>
                                 <th>Losses</th>
@@ -1117,27 +1285,58 @@ document.addEventListener('DOMContentLoaded', function() {
                         </thead>
                         <tbody>
                             <tr>
-                                <td>${deckString ? `Decks containing "${deckString}"` : 'All decks'}</td>
-                                <td>${deckPerformance.withString.total}</td>
-                                <td>${deckPerformance.withString.wins}</td>
-                                <td>${deckPerformance.withString.losses}</td>
-                                <td class="win-rate-cell ${getWinRateColorClass(withStringWinRate)}">${withStringWinRate}%</td>
-                            </tr>`;
-                            
-        if (deckString) {
-            analysisHTML += `
-                <tr>
-                    <td>Other decks</td>
-                    <td>${deckPerformance.withoutString.total}</td>
-                    <td>${deckPerformance.withoutString.wins}</td>
-                    <td>${deckPerformance.withoutString.losses}</td>
-                    <td class="win-rate-cell ${getWinRateColorClass(withoutStringWinRate)}">${withoutStringWinRate}%</td>
-                </tr>`;
-        }
-        
-        analysisHTML += `
+                                <td>${displayName1}</td>
+                                <td>${headToHeadGames.length}</td>
+                                <td>${player1Wins}</td>
+                                <td>${player2Wins}</td>
+                                <td class="win-rate-cell ${getWinRateColorClass(player1WinRate)}">${player1WinRate}%</td>
+                            </tr>
+                            <tr>
+                                <td>${displayName2}</td>
+                                <td>${headToHeadGames.length}</td>
+                                <td>${player2Wins}</td>
+                                <td>${player1Wins}</td>
+                                <td class="win-rate-cell ${getWinRateColorClass(player2WinRate)}">${player2WinRate}%</td>
+                            </tr>
                         </tbody>
                     </table>
+                </div>
+                
+                <div class="pvp-hero-stats">
+                    <h4>Heroes Used</h4>
+                    <div class="player-hero-grid">
+                        <div class="player-hero-column">
+                            <h5>${displayName1}'s Heroes</h5>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Hero</th>
+                                        <th>Games</th>
+                                        <th>Win Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${generatePlayerHeroesHTML(player1Heroes)}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="player-hero-column">
+                            <h5>${displayName2}'s Heroes</h5>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Hero</th>
+                                        <th>Games</th>
+                                        <th>Win Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${generatePlayerHeroesHTML(player2Heroes)}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 
                 <h4>Recent Games</h4>
@@ -1145,34 +1344,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Result</th>
-                            <th>Opponent</th>
-                            <th>Hero</th>
-                            <th>Vs Hero</th>
-                            <th>Deck Name</th>
+                            <th>Winner</th>
+                            <th>Winner Hero</th>
+                            <th>Loser</th>
+                            <th>Loser Hero</th>
                         </tr>
                     </thead>
                     <tbody>`;
         
         // Add recent games
-        relevantGames.slice(0, 10).forEach(game => {
-            const isPlayerWinner = players.includes(game.winner);
-            const playerHero = isPlayerWinner ? game.winningHero : game.losingHero;
-            const opponentHero = isPlayerWinner ? game.losingHero : game.winningHero;
-            const opponent = isPlayerWinner ? game.loser : game.winner;
-            const deck = isPlayerWinner ? game.winningDeck : game.losingDeck;
-            
-            const playerHeroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === playerHero);
-            const opponentHeroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === opponentHero);
+        headToHeadGames.slice(0, 10).forEach(game => {
+            const winnerHeroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === game.winningHero);
+            const loserHeroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === game.losingHero);
             
             analysisHTML += `
                 <tr>
                     <td>${formatDate(game.timestamp)}</td>
-                    <td>${isPlayerWinner ? 'Win' : 'Loss'}</td>
-                    <td>${opponent}</td>
-                    <td title="${playerHeroObj ? playerHeroObj.fullName : ''}">${playerHero.toUpperCase()}</td>
-                    <td title="${opponentHeroObj ? opponentHeroObj.fullName : ''}">${opponentHero.toUpperCase()}</td>
-                    <td>${deck}</td>
+                    <td>${capitalizePlayerName(game.winner)}</td>
+                    <td title="${winnerHeroObj ? winnerHeroObj.fullName : ''}">${game.winningHero.toUpperCase()}</td>
+                    <td>${capitalizePlayerName(game.loser)}</td>
+                    <td title="${loserHeroObj ? loserHeroObj.fullName : ''}">${game.losingHero.toUpperCase()}</td>
                 </tr>`;
         });
         
@@ -1182,7 +1373,38 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        deckAnalysisContent.innerHTML = analysisHTML;
+        pvpAnalysisContent.innerHTML = analysisHTML;
+        
+        // Helper function to generate hero stats HTML
+        function generatePlayerHeroesHTML(heroStats) {
+            const heroEntries = Object.entries(heroStats).map(([code, stats]) => {
+                const total = stats.wins + stats.losses;
+                const winRate = total > 0 ? (stats.wins / total * 100).toFixed(1) : '0.0';
+                const heroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === code);
+                const heroName = heroObj ? heroObj.fullName : code.toUpperCase();
+                
+                return {
+                    code,
+                    fullName: heroName,
+                    total,
+                    winRate
+                };
+            }).sort((a, b) => b.total - a.total);
+            
+            if (heroEntries.length === 0) {
+                return '<tr><td colspan="3" class="empty-state">No hero data available</td></tr>';
+            }
+            
+            return heroEntries.map(hero => {
+                const winRateClass = getWinRateColorClass(hero.winRate);
+                return `
+                    <tr>
+                        <td title="${hero.fullName}">${hero.code.toUpperCase()}</td>
+                        <td>${hero.total}</td>
+                        <td class="win-rate-cell ${winRateClass}">${hero.winRate}%</td>
+                    </tr>`;
+            }).join('');
+        }
     }
 
     // Generate opponent analysis
@@ -1190,7 +1412,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!currentSelections.opponent) return;
         
         const opponent = currentSelections.opponent;
-        selectedOpponentSpan.textContent = opponent;
+        selectedOpponentSpan.textContent = capitalizePlayerName(opponent);
         
         const opponentGames = gameData.filter(game => 
             game.winner === opponent || game.loser === opponent
@@ -1198,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (opponentGames.length === 0) {
             opponentAnalysis.innerHTML = `
-                <h2>Opponent Analysis: ${opponent}</h2>
+                <h2>Opponent Analysis: ${capitalizePlayerName(opponent)}</h2>
                 <p class="empty-state">No games found for this opponent.</p>
             `;
             opponentAnalysis.classList.remove('hidden');
@@ -1247,12 +1469,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Generate hero usage HTML
         let heroUsageHTML = '';
-        sortedByUsage.slice(0, 6).forEach(item => {
+        sortedByUsage.forEach((item, index) => {
             const { code, stats } = item;
             const heroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === code);
+            const hiddenClass = index >= 6 ? 'hidden' : '';
             
             heroUsageHTML += `
-                <div class="data-card">
+                <div class="data-card ${hiddenClass}">
                     <div class="hero" title="${heroObj ? heroObj.fullName : ''}">${code.toUpperCase()}</div>
                     <div class="value">${stats.total}</div>
                     <div class="label">games played</div>
@@ -1264,12 +1487,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Generate weakness HTML
         let weaknessHTML = '';
-        sortedByWinRate.slice(0, 6).forEach(item => {
+        sortedByWinRate.forEach((item, index) => {
             const { code, stats } = item;
             const heroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === code);
+            const hiddenClass = index >= 6 ? 'hidden' : '';
             
             weaknessHTML += `
-                <div class="data-card">
+                <div class="data-card ${hiddenClass}">
                     <div class="hero" title="${heroObj ? heroObj.fullName : ''}">${code.toUpperCase()}</div>
                     <div class="value ${getWinRateColorClass(stats.winRate)}">${stats.winRate.toFixed(1)}%</div>
                     <div class="label">${stats.wins}W / ${stats.losses}L</div>
@@ -1288,7 +1512,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!currentSelections.teammate) return;
         
         const teammate = currentSelections.teammate;
-        selectedTeammateSpan.textContent = teammate;
+        selectedTeammateSpan.textContent = capitalizePlayerName(teammate);
         
         const teammateGames = gameData.filter(game => 
             game.winner === teammate || game.loser === teammate
@@ -1296,7 +1520,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (teammateGames.length === 0) {
             teammateAnalysis.innerHTML = `
-                <h2>Teammate Analysis: ${teammate}</h2>
+                <h2>Teammate Analysis: ${capitalizePlayerName(teammate)}</h2>
                 <p class="empty-state">No games found for this teammate.</p>
             `;
             teammateAnalysis.classList.remove('hidden');
@@ -1345,12 +1569,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Generate best heroes HTML
         let bestHeroesHTML = '';
-        sortedByWinRate.slice(0, 6).forEach(item => {
+        sortedByWinRate.forEach((item, index) => {
             const { code, stats } = item;
             const heroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === code);
+            const hiddenClass = index >= 6 ? 'hidden' : '';
             
             bestHeroesHTML += `
-                <div class="data-card">
+                <div class="data-card ${hiddenClass}">
                     <div class="hero" title="${heroObj ? heroObj.fullName : ''}">${code.toUpperCase()}</div>
                     <div class="value ${getWinRateColorClass(stats.winRate)}">${stats.winRate.toFixed(1)}%</div>
                     <div class="label">${stats.wins}W / ${stats.losses}L</div>
@@ -1362,12 +1587,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Generate most played heroes HTML
         let playedHeroesHTML = '';
-        sortedByUsage.slice(0, 6).forEach(item => {
+        sortedByUsage.forEach((item, index) => {
             const { code, stats } = item;
             const heroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === code);
+            const hiddenClass = index >= 6 ? 'hidden' : '';
             
             playedHeroesHTML += `
-                <div class="data-card">
+                <div class="data-card ${hiddenClass}">
                     <div class="hero" title="${heroObj ? heroObj.fullName : ''}">${code.toUpperCase()}</div>
                     <div class="value">${stats.total}</div>
                     <div class="label">games played</div>
@@ -1414,4 +1640,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Call init when the page loads
     init();
+    
+    // Add CSS to style the player-hero-grid
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .pvp-hero-stats {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .player-hero-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .player-hero-column h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--accent-color);
+        }
+    `;
+    document.head.appendChild(style);
 });

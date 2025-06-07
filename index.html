@@ -70,42 +70,41 @@
                     <div class="checkbox-list" id="playerList">
                         <!-- Players will be loaded dynamically -->
                     </div>
-                    <button id="showMorePlayers" class="show-more-btn">Show More</button>
-                    <button id="showLessPlayers" class="show-less-btn hidden">Show Less</button>
                 </div>
                 <div id="opponentSelector" class="selector-panel hidden">
                     <div class="search-container">
                         <input type="text" id="opponentSearch" placeholder="Search opponent...">
                     </div>
-                    <select id="opponentSelect">
-                        <option value="">Select an opponent</option>
+                    <div class="player-search-results" id="opponentResults">
                         <!-- Opponents will be loaded dynamically -->
-                    </select>
+                    </div>
                 </div>
                 <div id="teammateSelector" class="selector-panel hidden">
                     <div class="search-container">
                         <input type="text" id="teammateSearch" placeholder="Search teammate...">
                     </div>
-                    <select id="teammateSelect">
-                        <option value="">Select a teammate</option>
+                    <div class="player-search-results" id="teammateResults">
                         <!-- Teammates will be loaded dynamically -->
-                    </select>
+                    </div>
                 </div>
             </div>
 
             <div class="filter-block">
-                <h2>Deck Search</h2>
-                <div class="deck-search">
-                    <div class="deck-search-row">
-                        <label for="deckHero">Hero:</label>
-                        <select id="deckHero">
-                            <option value="">Any Hero</option>
-                            <!-- Heroes will be loaded dynamically -->
-                        </select>
+                <h2>Player vs Player</h2>
+                <div class="pvp-search">
+                    <div class="pvp-search-row">
+                        <label for="firstPlayer">First Player:</label>
+                        <div class="search-container">
+                            <input type="text" id="firstPlayerSearch" placeholder="Search first player...">
+                            <div id="firstPlayerResults" class="player-search-results"></div>
+                        </div>
                     </div>
-                    <div class="deck-search-row">
-                        <label for="deckString">Deck contains:</label>
-                        <input type="text" id="deckString" placeholder="Enter text to search in deck names...">
+                    <div class="pvp-search-row">
+                        <label for="secondPlayer">Second Player:</label>
+                        <div class="search-container">
+                            <input type="text" id="secondPlayerSearch" placeholder="Search second player...">
+                            <div id="secondPlayerResults" class="player-search-results"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,7 +119,7 @@
                 <button class="tab-btn active" data-tab="matchups">Hero Matchups</button>
                 <button class="tab-btn" data-tab="heroes">Hero Stats</button>
                 <button class="tab-btn" data-tab="players">Player Stats</button>
-                <button class="tab-btn" data-tab="decks">Deck Analysis</button>
+                <button class="tab-btn" data-tab="pvp">Player vs Player</button>
             </div>
 
             <div id="loadingIndicator" class="hidden">
@@ -129,16 +128,8 @@
             </div>
 
             <div id="matchupsTab" class="tab-content active">
-                <div class="legend">
-                    <h3>Win Rate Legend (Zombie vs Plant)</h3>
-                    <div class="legend-items">
-                        <div class="legend-item dark-red">< 35%</div>
-                        <div class="legend-item red">35-45%</div>
-                        <div class="legend-item yellow">45-55%</div>
-                        <div class="legend-item light-green">55-65%</div>
-                        <div class="legend-item dark-green">65%+</div>
-                    </div>
-                    <p class="note"><i class="fas fa-info-circle"></i> Win rates are from the Zombie's perspective. Higher percentages (green) favor Zombies.</p>
+                <div class="matchup-info">
+                    <p class="note"><i class="fas fa-info-circle"></i> The cells show split win rates: top-left is from Plant's perspective, bottom-right is from Zombie's perspective.</p>
                 </div>
                 <div class="matchup-table-container">
                     <table id="matchupTable" class="matchup-table">
@@ -235,11 +226,11 @@
                 </div>
             </div>
 
-            <div id="decksTab" class="tab-content hidden">
-                <h3>Deck Analysis</h3>
-                <div id="deckAnalysisContent">
-                    <!-- Will be populated when a player + deck search is performed -->
-                    <p class="empty-state">Select a player and enter deck search criteria to see deck analysis.</p>
+            <div id="pvpTab" class="tab-content hidden">
+                <h3>Player vs Player Analysis</h3>
+                <div id="pvpAnalysisContent">
+                    <!-- Will be populated when two players are selected -->
+                    <p class="empty-state">Select two players to see head-to-head statistics.</p>
                 </div>
             </div>
         </div>
@@ -251,11 +242,15 @@
                 <div class="opponent-section">
                     <h3>Most Played Heroes</h3>
                     <div id="opponentHeroes" class="data-container"></div>
+                    <button class="show-more-btn" id="showMoreOpponentHeroes">Show More</button>
+                    <button class="show-less-btn hidden" id="showLessOpponentHeroes">Show Less</button>
                 </div>
                 
                 <div class="opponent-section">
                     <h3>Lowest Win Rate Against</h3>
                     <div id="opponentWeaknesses" class="data-container"></div>
+                    <button class="show-more-btn" id="showMoreOpponentWeaknesses">Show More</button>
+                    <button class="show-less-btn hidden" id="showLessOpponentWeaknesses">Show Less</button>
                 </div>
             </div>
         </div>
@@ -267,11 +262,15 @@
                 <div class="teammate-section">
                     <h3>Heroes with Best Win Rate</h3>
                     <div id="teammateHeroes" class="data-container"></div>
+                    <button class="show-more-btn" id="showMoreTeammateHeroes">Show More</button>
+                    <button class="show-less-btn hidden" id="showLessTeammateHeroes">Show Less</button>
                 </div>
                 
                 <div class="teammate-section">
                     <h3>Most Played Heroes</h3>
                     <div id="teammatePlayedHeroes" class="data-container"></div>
+                    <button class="show-more-btn" id="showMoreTeammatePlayedHeroes">Show More</button>
+                    <button class="show-less-btn hidden" id="showLessTeammatePlayedHeroes">Show Less</button>
                 </div>
             </div>
         </div>
