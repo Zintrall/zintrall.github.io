@@ -153,6 +153,15 @@ document.addEventListener('DOMContentLoaded', function() {
             word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
         ).join(' ');
     }
+    
+    // Helper function to get full hero name from code
+    function getHeroFullName(code) {
+        const foundZombieHero = zombieHeroes.find(h => h.code === code);
+        const foundPlantHero = plantHeroes.find(h => h.code === code);
+        if (foundZombieHero) return foundZombieHero.fullName;
+        if (foundPlantHero) return foundPlantHero.fullName;
+        return code.toUpperCase();
+    }
 
     // Setup all event listeners
     function setupEventListeners() {
@@ -1520,147 +1529,4 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (teammateGames.length === 0) {
             teammateAnalysis.innerHTML = `
-                <h2>Teammate Analysis: ${capitalizePlayerName(teammate)}</h2>
-                <p class="empty-state">No games found for this teammate.</p>
-            `;
-            teammateAnalysis.classList.remove('hidden');
-            return;
-        }
-        
-        // Count hero usage
-        const heroUsage = {};
-        
-        teammateGames.forEach(game => {
-            const isWinner = game.winner === teammate;
-            const hero = isWinner ? game.winningHero : game.losingHero;
-            
-            if (!heroUsage[hero]) {
-                heroUsage[hero] = {
-                    total: 0,
-                    wins: 0,
-                    losses: 0,
-                    winRate: 0
-                };
-            }
-            
-            heroUsage[hero].total++;
-            if (isWinner) {
-                heroUsage[hero].wins++;
-            } else {
-                heroUsage[hero].losses++;
-            }
-        });
-        
-        // Calculate win rates
-        Object.keys(heroUsage).forEach(hero => {
-            const stats = heroUsage[hero];
-            stats.winRate = stats.total > 0 ? stats.wins / stats.total * 100 : 0;
-        });
-        
-        // Sort heroes by win rate and usage
-        const sortedByWinRate = Object.keys(heroUsage)
-            .filter(hero => heroUsage[hero].total >= 3) // Minimum 3 games
-            .map(hero => ({ code: hero, stats: heroUsage[hero] }))
-            .sort((a, b) => b.stats.winRate - a.stats.winRate);
-            
-        const sortedByUsage = Object.keys(heroUsage)
-            .map(hero => ({ code: hero, stats: heroUsage[hero] }))
-            .sort((a, b) => b.stats.total - a.stats.total);
-        
-        // Generate best heroes HTML
-        let bestHeroesHTML = '';
-        sortedByWinRate.forEach((item, index) => {
-            const { code, stats } = item;
-            const heroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === code);
-            const hiddenClass = index >= 6 ? 'hidden' : '';
-            
-            bestHeroesHTML += `
-                <div class="data-card ${hiddenClass}">
-                    <div class="hero" title="${heroObj ? heroObj.fullName : ''}">${code.toUpperCase()}</div>
-                    <div class="value ${getWinRateColorClass(stats.winRate)}">${stats.winRate.toFixed(1)}%</div>
-                    <div class="label">${stats.wins}W / ${stats.losses}L</div>
-                </div>
-            `;
-        });
-        
-        teammateHeroes.innerHTML = bestHeroesHTML || '<p class="empty-state">No hero win rate data available</p>';
-        
-        // Generate most played heroes HTML
-        let playedHeroesHTML = '';
-        sortedByUsage.forEach((item, index) => {
-            const { code, stats } = item;
-            const heroObj = [...zombieHeroes, ...plantHeroes].find(h => h.code === code);
-            const hiddenClass = index >= 6 ? 'hidden' : '';
-            
-            playedHeroesHTML += `
-                <div class="data-card ${hiddenClass}">
-                    <div class="hero" title="${heroObj ? heroObj.fullName : ''}">${code.toUpperCase()}</div>
-                    <div class="value">${stats.total}</div>
-                    <div class="label">games played</div>
-                </div>
-            `;
-        });
-        
-        teammatePlayedHeroes.innerHTML = playedHeroesHTML || '<p class="empty-state">No hero usage data available</p>';
-        
-        // Show the teammate analysis
-        teammateAnalysis.classList.remove('hidden');
-    }
-
-    // Helper function to format date
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
-    }
-
-    // Helper function to get win rate color class
-    function getWinRateColorClass(winRate) {
-        winRate = parseFloat(winRate);
-        
-        if (winRate < 35) return 'wr-35-minus';
-        if (winRate >= 65) return 'wr-65-plus';
-        
-        // Calculate class based on exact percentage
-        // This ensures each win rate percentage has a slightly different color
-        if (winRate >= 35 && winRate < 45) {
-            const step = Math.floor(winRate) - 35;
-            return `wr-${35 + step}-to-${36 + step}`;
-        }
-        else if (winRate >= 45 && winRate < 55) {
-            const step = Math.floor(winRate) - 45;
-            return `wr-${45 + step}-to-${46 + step}`;
-        }
-        else if (winRate >= 55 && winRate < 65) {
-            const step = Math.floor(winRate) - 55;
-            return `wr-${55 + step}-to-${56 + step}`;
-        }
-        
-        return '';
-    }
-
-    // Call init when the page loads
-    init();
-    
-    // Add CSS to style the player-hero-grid
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .pvp-hero-stats {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .player-hero-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 15px;
-        }
-        
-        .player-hero-column h5 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: var(--accent-color);
-        }
-    `;
-    document.head.appendChild(style);
-});
+                
