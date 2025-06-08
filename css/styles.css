@@ -63,27 +63,7 @@ header h2 {
   font-weight: normal;
 }
 
-.theme-toggle {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-}
-
-.theme-toggle button {
-  background: none;
-  border: none;
-  color: var(--text-color);
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.theme-toggle button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
+/* Removed theme toggle */
 
 /* Main Container */
 .container {
@@ -143,13 +123,15 @@ header h2 {
 }
 
 .checkbox-container label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   cursor: pointer;
+  margin-bottom: 5px;
 }
 
 .checkbox-container input[type="checkbox"] {
   margin-right: 8px;
+  order: -1;
 }
 
 .select-buttons {
@@ -195,10 +177,12 @@ header h2 {
 .radio-option {
   display: flex;
   align-items: center;
+  margin-bottom: 5px;
 }
 
 .radio-option input[type="radio"] {
   margin-right: 8px;
+  order: -1;
 }
 
 .date-inputs {

@@ -9,11 +9,15 @@ let availablePatches = [];
 let availableTournaments = [];
 let deckLibrary = [];
 
+// Make playerNames globally accessible
+window.playerNames = [];
+
 // Initialize the application
 async function initializeApp() {
     try {
         // Load player names
         playerNames = await loadPlayerNames();
+        window.playerNames = [...playerNames]; // Make available globally
         
         // Load patches and tournaments
         availablePatches = await getAllPatches();
@@ -128,6 +132,10 @@ function populatePlayerCheckboxes(players) {
     // Sort player names alphabetically
     players.sort();
     
+    // Store players in global scope so we can access them when changing display type
+    window.playerNames = [...players];
+    playerNames = [...players];
+    
     players.forEach(player => {
         const div = document.createElement('div');
         const checkbox = document.createElement('input');
@@ -190,9 +198,17 @@ function getSelectedPlayers() {
     const dataType = document.querySelector('input[name="data-type"]:checked').value;
     
     if (dataType === 'player-stats') {
-        const radioButton = document.querySelector('input[name="player-selection"]:checked');
-        return radioButton ? [radioButton.value] : [];
+        // For player stats, we need to check if we're using the radio buttons
+        const radioButton = document.querySelector('#players-container input[type="radio"]:checked');
+        if (radioButton) {
+            return [radioButton.value];
+        } else {
+            // Fallback to first checked checkbox if radio buttons haven't been set up yet
+            const checkbox = document.querySelector('#players-container input[type="checkbox"]:checked');
+            return checkbox ? [checkbox.value] : [];
+        }
     } else {
+        // For other views, we use checkboxes
         const checkboxes = document.querySelectorAll('#players-container input[type="checkbox"]:checked');
         return Array.from(checkboxes).map(checkbox => checkbox.value);
     }

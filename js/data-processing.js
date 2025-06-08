@@ -70,23 +70,18 @@ class GameData {
     
     async fetchTournamentsForPatch(patch) {
         try {
-            const response = await fetch(`datafiles/${patch}/`);
+            // Instead of trying to fetch directory listing, use the tournaments.json file
+            const response = await fetch('datafiles/tournaments.json');
             if (!response.ok) {
-                throw new Error(`Failed to fetch tournaments for patch ${patch}`);
+                throw new Error(`Failed to fetch tournaments list`);
             }
             
-            const text = await response.text();
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(text, 'text/html');
-            
-            // Extract tournament names from the directory listing
-            const links = Array.from(htmlDoc.querySelectorAll('a'));
-            return links
-                .filter(link => link.href.endsWith('.txt'))
-                .map(link => link.textContent.replace('.txt', ''));
+            const tournaments = await response.json();
+            return tournaments;
         } catch (error) {
             console.error(`Error fetching tournaments for patch ${patch}:`, error);
-            return [];
+            // Fallback to hardcoded tournaments if available
+            return ["Quicksand Live", "Quicksand Ranked"];
         }
     }
     

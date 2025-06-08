@@ -19,10 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Toggle theme (not fully implemented - dark theme is default)
-    document.getElementById('theme-toggle-btn').addEventListener('click', () => {
-        document.body.classList.toggle('light-theme');
-    });
+    // Theme is fixed to dark mode
     
     // Show/hide custom date filter based on checkbox
     document.getElementById('use-custom-date').addEventListener('change', function() {
@@ -164,16 +161,19 @@ function toggleAllCheckboxes(containerId, checked) {
 
 function filterPlayerCheckboxes(searchText) {
     const container = document.getElementById('players-container');
-    const labels = container.querySelectorAll('label');
+    const checkboxDivs = container.querySelectorAll('div');
     
     const searchLower = searchText.toLowerCase();
     
-    labels.forEach(label => {
-        const playerName = label.textContent.toLowerCase();
-        if (playerName.includes(searchLower) || searchLower === '') {
-            label.style.display = '';
-        } else {
-            label.style.display = 'none';
+    checkboxDivs.forEach(div => {
+        const label = div.querySelector('label');
+        if (label) {
+            const playerName = label.textContent.toLowerCase();
+            if (playerName.includes(searchLower) || searchLower === '') {
+                div.style.display = '';
+            } else {
+                div.style.display = 'none';
+            }
         }
     });
 }
@@ -184,14 +184,14 @@ function updatePlayerSelectionVisibility() {
     
     if (dataType === 'player-stats') {
         // Change to select only one player
-        setupSinglePlayerSelection();
+        setupSinglePlayerSelection(window.playerNames || []);
     } else {
         // Revert to multi-selection
-        setupMultiPlayerSelection();
+        setupMultiPlayerSelection(window.playerNames || []);
     }
 }
 
-function setupSinglePlayerSelection() {
+function setupSinglePlayerSelection(playerList) {
     const container = document.getElementById('players-container');
     const currentCheckboxes = container.querySelectorAll('input[type="checkbox"]');
     
@@ -203,15 +203,14 @@ function setupSinglePlayerSelection() {
         }
     });
     
+    // Use provided player list or fetch from window
+    const allPlayers = playerList && playerList.length > 0 ? playerList : window.playerNames || [];
+    
     // Clear the container
     container.innerHTML = '';
     
-    // Get player names
-    const playerDivs = Array.from(document.querySelectorAll('#players-container label'))
-        .map(label => label.textContent.trim());
-    
     // Create radio buttons
-    playerDivs.forEach(player => {
+    allPlayers.forEach(player => {
         const div = document.createElement('div');
         const radio = document.createElement('input');
         radio.type = 'radio';
@@ -232,9 +231,15 @@ function setupSinglePlayerSelection() {
         div.appendChild(label);
         container.appendChild(div);
     });
+    
+    // Re-apply any active search filter
+    const searchText = document.getElementById('player-search').value;
+    if (searchText) {
+        filterPlayerCheckboxes(searchText);
+    }
 }
 
-function setupMultiPlayerSelection() {
+function setupMultiPlayerSelection(playerList) {
     const container = document.getElementById('players-container');
     const currentRadios = container.querySelectorAll('input[type="radio"]');
     
@@ -249,12 +254,11 @@ function setupMultiPlayerSelection() {
     // Clear the container
     container.innerHTML = '';
     
-    // Get player names
-    const playerDivs = Array.from(document.querySelectorAll('#players-container label'))
-        .map(label => label.textContent.trim());
+    // Use provided player list or fetch from window
+    const allPlayers = playerList && playerList.length > 0 ? playerList : window.playerNames || [];
     
-    // Create checkboxes
-    playerDivs.forEach(player => {
+    // Create checkboxes for all players
+    allPlayers.forEach(player => {
         const div = document.createElement('div');
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -274,6 +278,12 @@ function setupMultiPlayerSelection() {
         div.appendChild(label);
         container.appendChild(div);
     });
+    
+    // Re-apply any active search filter
+    const searchText = document.getElementById('player-search').value;
+    if (searchText) {
+        filterPlayerCheckboxes(searchText);
+    }
 }
 
 // Experimental deck library functions

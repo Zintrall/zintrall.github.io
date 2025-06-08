@@ -167,9 +167,14 @@ async function getAllTournaments() {
         } else {
             console.error('Failed to load tournaments list');
             // Fallback to hardcoded list if available
+            tournaments.add("Quicksand Live");
+            tournaments.add("Quicksand Ranked");
         }
     } catch (error) {
         console.error('Error loading tournaments:', error);
+        // Fallback to hardcoded list if error occurs
+        tournaments.add("Quicksand Live");
+        tournaments.add("Quicksand Ranked");
     }
     
     return Array.from(tournaments).sort();
