@@ -160,51 +160,106 @@ function sortHeroes(heroes) {
   });
 }
 
-// Function to get an array of all unique tournaments from the data files
-async function getAllTournaments() {
-  const tournaments = new Set();
-
+// Function to scan for available patches directly from the filesystem
+async function scanForPatches() {
+  const patches = new Set();
+  
   try {
-    const response = await fetch("tournaments.json");
+    // Make a direct request to the datafiles directory
+    const response = await fetch("datafiles/");
     if (response.ok) {
-      const data = await response.json();
-      data.forEach((tournament) => tournaments.add(tournament));
-    } else {
-      console.error("Failed to load tournaments list");
-      // Fallback to hardcoded list if available
-      tournaments.add("Quicksand Live");
-      tournaments.add("Quicksand Ranked");
+      const text = await response.text();
+      
+      // Parse the HTML directory listing
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(text, 'text/html');
+      
+      // Find all folder links
+      const links = Array.from(doc.querySelectorAll('a'));
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        // Look for directories matching our patch naming pattern (p1, p2, etc.)
+        if (href && href.match(/^p\d+\/?$/)) {
+          // Extract patch name without trailing slash
+          const patch = href.replace('/', '');
+          patches.add(patch);
+        }
+      });
+    }
+    
+    // Fallback if no patches found
+    if (patches.size === 0) {
+      console.warn("No patches found in directory listing, using fallbacks");
+      patches.add("p1");
+      patches.add("p2");
     }
   } catch (error) {
-    console.error("Error loading tournaments:", error);
-    // Fallback to hardcoded list if error occurs
+    console.error("Error scanning for patches:", error);
+    // Add fallback patches
+    patches.add("p1");
+    patches.add("p2");
+  }
+
+  return Array.from(patches).sort();
+}
+
+// Function to scan for tournaments in a specific patch directory
+async function scanForTournaments(patch) {
+  const tournaments = [];
+  
+  try {
+    // Request the specific patch directory
+    const response = await fetch(`datafiles/${patch}/`);
+    if (response.ok) {
+      const text = await response.text();
+      
+      // Parse the HTML directory listing
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(text, 'text/html');
+      
+      // Find all file links
+      const links = Array.from(doc.querySelectorAll('a'));
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        // Look for .txt files which are tournament data
+        if (href && href.endsWith('.txt')) {
+          // Extract tournament name without .txt extension and decode URL entities
+          const tournamentName = decodeURIComponent(href.replace('.txt', ''));
+          tournaments.push(tournamentName);
+        }
+      });
+    }
+  } catch (error) {
+    console.warn(`Error scanning tournament files in patch ${patch}:`, error);
+  }
+
+  return tournaments.sort();
+}
+
+// For backward compatibility - will eventually be removed
+async function getAllPatches() {
+  return scanForPatches();
+}
+
+// For backward compatibility - will eventually be removed
+async function getAllTournaments() {
+  const tournaments = new Set();
+  const patches = await scanForPatches();
+  
+  // For each patch, scan for tournaments and add them to the set
+  for (const patch of patches) {
+    const patchTournaments = await scanForTournaments(patch);
+    patchTournaments.forEach(tournament => tournaments.add(tournament));
+  }
+  
+  // If no tournaments found, use fallbacks
+  if (tournaments.size === 0) {
+    console.warn("No tournaments found, using fallbacks");
     tournaments.add("Quicksand Live");
     tournaments.add("Quicksand Ranked");
   }
 
   return Array.from(tournaments).sort();
-}
-
-// Function to get all patch names
-async function getAllPatches() {
-  const patches = new Set();
-
-  try {
-    const response = await fetch("patches.json");
-    if (response.ok) {
-      const data = await response.json();
-      data.forEach((patch) => patches.add(patch));
-    } else {
-      console.error("Failed to load patches list");
-      // Add fallback patches
-      patches.add("p1");
-      patches.add("p2");
-    }
-  } catch (error) {
-    console.error("Error loading patches:", error);
-  }
-
-  return Array.from(patches).sort();
 }
 
 // Function to load player names

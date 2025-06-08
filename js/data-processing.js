@@ -20,34 +20,30 @@ class GameData {
     endDate = null,
   ) {
     this.games = [];
-
+    
     // If no patches selected, assume all
     if (!selectedPatches || selectedPatches.length === 0) {
-      const allPatches = await getAllPatches();
+      const allPatches = await scanForPatches();
       selectedPatches = allPatches;
     }
-
-    // Get the global list of tournaments upfront
-    const allTournaments = await this.fetchTournamentsForPatch("p1"); // We use p1 as the source of truth
-
+    
     // Load data from each selected patch
     for (const patch of selectedPatches) {
       try {
-        // For each tournament in the global list
-        for (const tournament of allTournaments) {
+        // Get tournaments available in this specific patch
+        const patchTournaments = await scanForTournaments(patch);
+        
+        // For each tournament in this patch
+        for (const tournament of patchTournaments) {
           // Skip if not in selected tournaments (when filter is active)
-          if (
-            selectedTournaments &&
-            selectedTournaments.length > 0 &&
-            !selectedTournaments.includes(tournament)
-          ) {
+          if (selectedTournaments && selectedTournaments.length > 0 && !selectedTournaments.includes(tournament)) {
             continue;
           }
-
-          // Load tournament data (will return empty array if file doesn't exist)
+        
+          // Load tournament data
           const tournamentData = await this.fetchTournamentData(
             patch,
-            tournament,
+            tournament
           );
 
           // Process each game
@@ -82,34 +78,19 @@ class GameData {
   }
 
   async fetchTournamentsForPatch(patch) {
-      try {
-          // Use the tournaments.json file which contains all tournaments across all patches
-          const response = await fetch("datafiles/tournaments.json");
-          if (!response.ok) {
-              throw new Error(`Failed to fetch tournaments list`);
-          }
-            
-          const tournaments = await response.json();
-            
-          // Return all tournaments - we'll handle missing ones during data loading
-          return tournaments;
-      } catch (error) {
-          console.warn(
-            `Error fetching tournaments list, using fallback list:`,
-            error,
-          );
-          // Fallback to hardcoded tournaments if available
-          return ["Quicksand Live", "Quicksand Ranked"];
-      }
+      // We'll use the scanForTournaments function from utils.js
+      return await scanForTournaments(patch);
   }
 
   async fetchTournamentData(patch, tournament) {
     try {
-      const response = await fetch(`datafiles/${patch}/${tournament}.txt`);
+      // Use encodeURIComponent to handle special characters in tournament names
+      const encodedTournament = encodeURIComponent(tournament);
+      const response = await fetch(
+        `datafiles/${patch}/${encodedTournament}.txt`,
+      );
       if (!response.ok) {
-        console.warn(
-          `Tournament file not found: datafiles/${patch}/${tournament}.txt`,
-        );
+        console.warn(`Tournament file not found: datafiles/${patch}/${encodedTournament}.txt`);
         return []; // Return empty array for missing files
       }
 

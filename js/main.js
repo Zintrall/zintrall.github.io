@@ -19,8 +19,8 @@ async function initializeApp() {
         playerNames = await loadPlayerNames();
         window.playerNames = [...playerNames]; // Make available globally
         
-        // Load patches and tournaments
-        availablePatches = await getAllPatches();
+        // Scan for patches directly from filesystem
+        availablePatches = await scanForPatches();
         
         // Initialize UI components
         await initializeFilters();
@@ -83,18 +83,26 @@ async function populateTournamentsForSelectedPatches() {
     const tournamentsContainer = document.getElementById('tournaments-container');
     tournamentsContainer.innerHTML = '';
     
-    // Get all tournaments from all selected patches
+    // Get all tournaments from all selected patches by scanning directories
     availableTournaments = [];
-    for (const patch of selectedPatches) {
+    
+    // First, scan for all available patches
+    const patchFolders = await scanForPatches();
+    
+    // Filter to only selected patches or use all if none selected
+    const patchesToScan = selectedPatches.length > 0 ? selectedPatches : patchFolders;
+    
+    for (const patch of patchesToScan) {
         try {
-            const patchTournaments = await gameData.fetchTournamentsForPatch(patch);
+            // Scan the patch directory for tournament files
+            const patchTournaments = await scanForTournaments(patch);
             patchTournaments.forEach(tournament => {
                 if (!availableTournaments.includes(tournament)) {
                     availableTournaments.push(tournament);
                 }
             });
         } catch (error) {
-            console.error(`Failed to fetch tournaments for patch ${patch}:`, error);
+            console.warn(`Failed to scan tournaments for patch ${patch}:`, error);
         }
     }
     
