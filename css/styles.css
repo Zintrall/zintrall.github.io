@@ -279,6 +279,11 @@ header h2 {
   gap: 10px;
 }
 
+/* Hide export image button */
+#export-image {
+  display: none;
+}
+
 .control-btn {
   background-color: transparent;
   border: 1px solid var(--border-color);
@@ -342,6 +347,7 @@ header h2 {
   flex: 1;
   text-align: center;
   transition: background-color 0.2s;
+  max-width: 200px;
 }
 
 .tab-btn:first-child {
@@ -435,8 +441,28 @@ header h2 {
   position: relative;
   height: 60px;
   width: 60px;
+  text-align: center;
 }
 
+.single-winrate {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+}
+
+.cell-winrate {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.cell-games {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* Legacy diagonal cell styles - kept for reference */
 .cell-top-left, .cell-bottom-right {
   position: absolute;
   display: flex;
@@ -472,14 +498,17 @@ header h2 {
 .player-rankings-container {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .ranking-section {
   flex: 1;
+  min-width: 300px;
   background-color: var(--input-bg);
   border-radius: var(--border-radius);
   padding: 15px;
   position: relative;
+  margin-bottom: 20px;
 }
 
 .show-more-container {
@@ -522,11 +551,55 @@ header h2 {
   font-size: 0.8rem;
 }
 
-/* Matchup Details */
-.matchup-details-container {
+/* Player Stats */
+.player-overall-stats {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
   background-color: var(--input-bg);
   border-radius: var(--border-radius);
-  padding: 20px;
+  padding: 15px;
+  text-align: center;
+  flex: 1;
+  min-width: 100px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 5px;
+}
+
+.player-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+
+.player-stats-table th,
+.player-stats-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.player-stats-table th {
+  background-color: var(--table-header-bg);
+  color: var(--text-secondary);
+}
+
+.player-stats-table tr:nth-child(even) {
+  background-color: var(--table-stripe-bg);
 }
 
 /* Modal */

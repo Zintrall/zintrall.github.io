@@ -99,9 +99,11 @@
 
             <button id="generate-report" class="generate-btn">Generate Report</button>
             
+            <!-- Experimental features button removed, but functionality kept in code
             <div class="experimental-section">
                 <button id="toggle-experimental" class="experimental-btn">Experimental Features</button>
             </div>
+            -->
         </section>
 
         <section id="results" class="results-section">
@@ -109,7 +111,6 @@
                 <h3>Winrate Analysis</h3>
                 <div class="results-controls">
                     <button id="export-csv" class="control-btn">Export CSV</button>
-                    <button id="export-image" class="control-btn">Export Image</button>
                 </div>
             </div>
 
@@ -126,7 +127,6 @@
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="hero-winrate">Hero Winrates</button>
                     <button class="tab-btn" data-tab="player-winrate">Player Rankings</button>
-                    <button class="tab-btn" data-tab="matchup-details">Matchup Details</button>
                 </div>
 
                 <div id="hero-winrate" class="tab-content active">
@@ -186,11 +186,7 @@
                     </div>
                 </div>
 
-                <div id="matchup-details" class="tab-content">
-                    <div id="matchup-details-container" class="matchup-details-container">
-                        <!-- Will be populated by JavaScript -->
-                    </div>
-                </div>
+                <!-- Matchup details tab removed -->
             </div>
         </section>
     </main>

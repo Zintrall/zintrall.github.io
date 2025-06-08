@@ -337,11 +337,19 @@ async function displayHeroWinrates(games) {
         tempGameData.heroes.add(game.losingHero);
     });
     
+    // Filter heroes to ensure we have the 11x11 grid (all heroes)
+    const plantHeroes = ["gs", "sf", "wk", "cz", "sp", "ct", "gk", "nc", "ro", "cc", "bc"];
+    const zombieHeroes = ["sb", "sm", "if", "rb", "eb", "bf", "pb", "im", "zm", "nt", "hg"];
+    
+    // Add all heroes to the set even if they weren't in games
+    plantHeroes.forEach(hero => tempGameData.heroes.add(hero));
+    zombieHeroes.forEach(hero => tempGameData.heroes.add(hero));
+    
     // Get matchup data
     const matchupData = tempGameData.getHeroMatchupData();
     
     // Sort heroes - plants first, then zombies
-    const sortedHeroes = sortHeroes(Array.from(tempGameData.heroes));
+    const sortedHeroes = [...plantHeroes, ...zombieHeroes];
     
     // Create the table
     const table = document.getElementById('winrate-table');
@@ -355,10 +363,10 @@ async function displayHeroWinrates(games) {
     const cornerCell = document.createElement('th');
     headerRow.appendChild(cornerCell);
     
-    // Hero columns
-    sortedHeroes.forEach(hero => {
+    // Hero columns - only zombie heroes
+    zombieHeroes.forEach(hero => {
         const th = document.createElement('th');
-        th.className = isPlantHero(hero) ? 'plant-hero' : 'zombie-hero';
+        th.className = 'zombie-hero';
         th.textContent = getFullHeroName(hero);
         headerRow.appendChild(th);
     });
@@ -374,62 +382,45 @@ async function displayHeroWinrates(games) {
     // Create table body
     const tbody = document.createElement('tbody');
     
-    // Create rows for each hero
-    sortedHeroes.forEach(rowHero => {
+    // Create rows for each plant hero
+    plantHeroes.forEach(plantHero => {
         const row = document.createElement('tr');
         
         // Row header (hero name)
         const rowHeader = document.createElement('th');
-        rowHeader.className = isPlantHero(rowHero) ? 'plant-hero' : 'zombie-hero';
-        rowHeader.textContent = getFullHeroName(rowHero);
+        rowHeader.className = 'plant-hero';
+        rowHeader.textContent = getFullHeroName(plantHero);
         row.appendChild(rowHeader);
         
         // Hero matchup cells
-        let totalWins = 0;
-        let totalGames = 0;
+        let totalPlantWins = 0;
+        let totalMatchups = 0;
         
-        sortedHeroes.forEach(colHero => {
+        zombieHeroes.forEach(zombieHero => {
             const cell = document.createElement('td');
-            cell.className = 'winrate-cell';
+            cell.className = 'winrate-cell single-winrate';
             
-            // Get matchup data
-            const matchup = matchupData[rowHero][colHero];
+            // Calculate from plant hero perspective
+            // To get plant winrate, we need to find matches where plant hero won against zombie hero
+            const plantMatchup = matchupData[plantHero][zombieHero] || { wins: 0, total: 0 };
+            const zombieMatchup = matchupData[zombieHero][plantHero] || { wins: 0, total: 0 };
             
-            if (rowHero !== colHero && matchup && matchup.total > 0) {
-                // Calculate winrate
-                const winRate = (matchup.wins / matchup.total) * 100;
+            // Total games between these heroes
+            const totalGames = plantMatchup.total + zombieMatchup.wins;
+            
+            if (totalGames > 0) {
+                // Calculate plant winrate
+                const plantWins = plantMatchup.wins;
+                const plantWinRate = (plantWins / totalGames) * 100;
                 
-                // Split cell diagonally
-                const topLeft = document.createElement('div');
-                topLeft.className = 'cell-top-left';
-                topLeft.style.backgroundColor = getWinrateColor(winRate);
-                topLeft.textContent = `${winRate.toFixed(1)}%`;
+                // Create the cell content
+                cell.style.backgroundColor = getWinrateColor(plantWinRate);
+                cell.innerHTML = `<div class="cell-winrate">${plantWinRate.toFixed(1)}%</div>
+                                  <div class="cell-games">(${totalGames} games)</div>`;
                 
-                // Bottom right is the opponent's perspective
-                const opponentMatchup = matchupData[colHero][rowHero];
-                let opponentWinRate = 0;
-                
-                if (opponentMatchup && opponentMatchup.total > 0) {
-                    opponentWinRate = (opponentMatchup.wins / opponentMatchup.total) * 100;
-                }
-                
-                const bottomRight = document.createElement('div');
-                bottomRight.className = 'cell-bottom-right';
-                bottomRight.style.backgroundColor = getWinrateColor(opponentWinRate);
-                bottomRight.textContent = `${opponentWinRate.toFixed(1)}%`;
-                
-                // Diagonal line
-                const diagonal = document.createElement('div');
-                diagonal.className = 'cell-diagonal';
-                
-                // Add to cell
-                cell.appendChild(topLeft);
-                cell.appendChild(bottomRight);
-                cell.appendChild(diagonal);
-                
-                // Update totals
-                totalWins += matchup.wins;
-                totalGames += matchup.total;
+                // Update totals for this plant hero
+                totalPlantWins += plantWins;
+                totalMatchups += totalGames;
             } else {
                 cell.innerHTML = '<div style="text-align: center; line-height: 60px;">-</div>';
             }
@@ -440,11 +431,57 @@ async function displayHeroWinrates(games) {
         // Total column
         const totalCell = document.createElement('td');
         
-        if (totalGames > 0) {
-            const totalWinRate = (totalWins / totalGames) * 100;
-            totalCell.textContent = `${totalWinRate.toFixed(1)}% (${totalWins}/${totalGames})`;
+        if (totalMatchups > 0) {
+            const totalWinRate = (totalPlantWins / totalMatchups) * 100;
+            totalCell.innerHTML = `<div>${totalWinRate.toFixed(1)}%</div><div>(${totalPlantWins}/${totalMatchups})</div>`;
             totalCell.style.backgroundColor = getWinrateColor(totalWinRate);
             totalCell.style.color = totalWinRate > 50 ? '#000' : '#fff';
+        } else {
+            totalCell.textContent = '-';
+        }
+        
+        row.appendChild(totalCell);
+        tbody.appendChild(row);
+    });
+    
+    // Add zombie hero rows for their totals
+    zombieHeroes.forEach(zombieHero => {
+        const row = document.createElement('tr');
+        
+        // Row header (hero name)
+        const rowHeader = document.createElement('th');
+        rowHeader.className = 'zombie-hero';
+        rowHeader.textContent = getFullHeroName(zombieHero);
+        row.appendChild(rowHeader);
+        
+        // Calculate total zombie winrate against all plants
+        let zombieWins = 0;
+        let totalZombieGames = 0;
+        
+        // Fill cells with dashes for zombie vs zombie matchups
+        zombieHeroes.forEach(() => {
+            const cell = document.createElement('td');
+            cell.innerHTML = '<div style="text-align: center; line-height: 60px;">-</div>';
+            row.appendChild(cell);
+        });
+        
+        // Calculate zombie hero stats from all matchups
+        plantHeroes.forEach(plantHero => {
+            const zombieMatchup = matchupData[zombieHero][plantHero] || { wins: 0, total: 0 };
+            const plantMatchup = matchupData[plantHero][zombieHero] || { wins: 0, total: 0 };
+            
+            zombieWins += zombieMatchup.wins;
+            totalZombieGames += zombieMatchup.total + plantMatchup.wins;
+        });
+        
+        // Total column for zombie
+        const totalCell = document.createElement('td');
+        
+        if (totalZombieGames > 0) {
+            const zombieWinRate = (zombieWins / totalZombieGames) * 100;
+            totalCell.innerHTML = `<div>${zombieWinRate.toFixed(1)}%</div><div>(${zombieWins}/${totalZombieGames})</div>`;
+            totalCell.style.backgroundColor = getWinrateColor(zombieWinRate);
+            totalCell.style.color = zombieWinRate > 50 ? '#000' : '#fff';
         } else {
             totalCell.textContent = '-';
         }
@@ -548,7 +585,7 @@ function displayRankingTable(tableId, rankings, sortKey) {
     table.appendChild(tbody);
 }
 
-// Display player stats in a modal
+// Display player stats in main content area
 async function displayPlayerStatsModal(playerName) {
     // Get player data
     const playerGames = gameData.getPlayerGames(playerName);
@@ -561,29 +598,17 @@ async function displayPlayerStatsModal(playerName) {
     const wins = playerGames.filter(game => game.winner.toLowerCase() === playerName.toLowerCase()).length;
     const winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0;
     
-    // Find best and worst heroes
-    let bestHero = { hero: null, winRate: 0 };
-    let worstHero = { hero: null, winRate: 100 };
-    let mostPlayed = { hero: null, played: 0 };
+    // Get container for the data
+    document.getElementById('data-container').style.display = 'block';
     
-    for (const hero in heroStats) {
-        const stats = heroStats[hero];
-        if (stats.played >= 3) { // Only consider heroes with at least 3 games
-            if (stats.winRate > bestHero.winRate) {
-                bestHero = { hero, winRate: stats.winRate };
-            }
-            if (stats.winRate < worstHero.winRate) {
-                worstHero = { hero, winRate: stats.winRate };
-            }
-            if (stats.played > mostPlayed.played) {
-                mostPlayed = { hero, played: stats.played };
-            }
-        }
-    }
+    // Select the first tab and make it active
+    document.querySelector('.tab-btn[data-tab="hero-winrate"]').click();
     
-    // Get modal elements
-    const modal = document.getElementById('player-stats-modal');
-    const container = document.getElementById('player-stats-container');
+    // Get the hero-winrate tab content
+    const heroWinrateTab = document.getElementById('hero-winrate');
+    
+    // Clear the content
+    heroWinrateTab.innerHTML = '';
     
     // Create content
     let content = `
@@ -607,67 +632,27 @@ async function displayPlayerStatsModal(playerName) {
             </div>
         </div>
         
-        <div class="player-hero-highlights">
-            <div class="highlight-section">
-                <h3>Hero Highlights</h3>
-                <div class="highlights-container">
+        <h3>Best Winrate Heroes</h3>
+        <table class="player-stats-table">
+            <thead>
+                <tr>
+                    <th>Hero</th>
+                    <th>Games</th>
+                    <th>Wins</th>
+                    <th>Losses</th>
+                    <th>Winrate</th>
+                </tr>
+            </thead>
+            <tbody>
     `;
     
-    if (mostPlayed.hero) {
-        content += `
-            <div class="highlight-card">
-                <div class="highlight-title">Most Played Hero</div>
-                <div class="highlight-hero">${getFullHeroName(mostPlayed.hero)}</div>
-                <div class="highlight-stats">${mostPlayed.played} games</div>
-            </div>
-        `;
-    }
+    // Sort heroes by winrate (descending)
+    const bestWinrateHeroes = Object.entries(heroStats)
+        .filter(([_, stats]) => stats.played >= 3) // Only consider heroes with at least 3 games
+        .sort((a, b) => b[1].winRate - a[1].winRate)
+        .slice(0, 10); // Take top 10
     
-    if (bestHero.hero) {
-        content += `
-            <div class="highlight-card">
-                <div class="highlight-title">Best Hero</div>
-                <div class="highlight-hero">${getFullHeroName(bestHero.hero)}</div>
-                <div class="highlight-stats">${bestHero.winRate.toFixed(1)}% winrate</div>
-            </div>
-        `;
-    }
-    
-    if (worstHero.hero) {
-        content += `
-            <div class="highlight-card">
-                <div class="highlight-title">Worst Hero</div>
-                <div class="highlight-hero">${getFullHeroName(worstHero.hero)}</div>
-                <div class="highlight-stats">${worstHero.winRate.toFixed(1)}% winrate</div>
-            </div>
-        `;
-    }
-    
-    content += `
-                </div>
-            </div>
-        </div>
-        
-        <div class="player-detailed-stats">
-            <h3>Hero Statistics</h3>
-            <table class="player-stats-table">
-                <thead>
-                    <tr>
-                        <th>Hero</th>
-                        <th>Games</th>
-                        <th>Wins</th>
-                        <th>Losses</th>
-                        <th>Winrate</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-    
-    // Sort heroes by games played
-    const sortedHeroes = Object.entries(heroStats)
-        .sort((a, b) => b[1].played - a[1].played);
-    
-    sortedHeroes.forEach(([hero, stats]) => {
+    bestWinrateHeroes.forEach(([hero, stats]) => {
         content += `
             <tr>
                 <td>${getFullHeroName(hero)}</td>
@@ -682,16 +667,106 @@ async function displayPlayerStatsModal(playerName) {
     });
     
     content += `
-                </tbody>
-            </table>
-        </div>
+            </tbody>
+        </table>
+        
+        <h3>Most Played Heroes</h3>
+        <table class="player-stats-table">
+            <thead>
+                <tr>
+                    <th>Hero</th>
+                    <th>Games</th>
+                    <th>Wins</th>
+                    <th>Losses</th>
+                    <th>Winrate</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    // Sort heroes by games played
+    const mostPlayedHeroes = Object.entries(heroStats)
+        .sort((a, b) => b[1].played - a[1].played)
+        .slice(0, 10); // Take top 10
+    
+    mostPlayedHeroes.forEach(([hero, stats]) => {
+        content += `
+            <tr>
+                <td>${getFullHeroName(hero)}</td>
+                <td>${stats.played}</td>
+                <td>${stats.wins}</td>
+                <td>${stats.played - stats.wins}</td>
+                <td style="color: ${stats.winRate >= 50 ? 'var(--light-green)' : 'var(--orange)'}">
+                    ${stats.winRate.toFixed(1)}%
+                </td>
+            </tr>
+        `;
+    });
+    
+    content += `
+            </tbody>
+        </table>
+        
+        <h3>Most Difficult Matchups</h3>
+        <table class="player-stats-table">
+            <thead>
+                <tr>
+                    <th>Player's Hero</th>
+                    <th>Opponent Hero</th>
+                    <th>Games</th>
+                    <th>Wins</th>
+                    <th>Losses</th>
+                    <th>Winrate</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    // Calculate difficult matchups - Get all player's heroes and their matchups
+    let difficultMatchups = [];
+    
+    // Process hero matchups data
+    for (const ownHero in heroMatchups) {
+        for (const oppHero in heroMatchups[ownHero]) {
+            const matchup = heroMatchups[ownHero][oppHero];
+            if (matchup.played >= 3) { // Only consider matchups with at least 3 games
+                difficultMatchups.push({
+                    ownHero,
+                    oppHero,
+                    ...matchup
+                });
+            }
+        }
+    }
+    
+    // Sort by winrate (ascending)
+    difficultMatchups.sort((a, b) => a.winRate - b.winRate);
+    
+    // Take 10 worst matchups
+    difficultMatchups.slice(0, 10).forEach(matchup => {
+        content += `
+            <tr>
+                <td>${getFullHeroName(matchup.ownHero)}</td>
+                <td>${getFullHeroName(matchup.oppHero)}</td>
+                <td>${matchup.played}</td>
+                <td>${matchup.wins}</td>
+                <td>${matchup.played - matchup.wins}</td>
+                <td style="color: ${matchup.winRate >= 50 ? 'var(--light-green)' : 'var(--orange)'}">
+                    ${matchup.winRate.toFixed(1)}%
+                </td>
+            </tr>
+        `;
+    });
+    
+    content += `
+            </tbody>
+        </table>
     `;
     
     // Fill the container
-    container.innerHTML = content;
+    heroWinrateTab.innerHTML = content;
     
-    // Show the modal
-    modal.style.display = 'block';
+    // Hide loading spinner
     document.getElementById('loading-spinner').style.display = 'none';
 }
 
