@@ -32,11 +32,14 @@ div
 ducky-vn
 duymon
 elio
+evan
 febreze
 first hero
+fittypea
 fluke
 foxi
 franinja
+fredsonians
 frozen
 fun guy
 gabegalaxy
@@ -100,6 +103,7 @@ tcc
 thatonestar
 toby
 tolu
+tomaselli
 tornillo
 tqm
 tridart
@@ -109,4 +113,5 @@ voof
 wild
 xera
 yolm
+zintrall
 zzyzx

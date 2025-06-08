@@ -336,6 +336,7 @@ header h2 {
   display: flex;
   gap: 2px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -374,33 +375,7 @@ header h2 {
 }
 
 /* Winrate Table */
-.legend-container {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-  padding: 10px;
-  background-color: var(--input-bg);
-  border-radius: var(--border-radius);
-}
-
-.legend-title {
-  font-weight: 600;
-  margin-right: 10px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.legend-color {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-}
+/* Legend removed */
 
 .winrate-table-container {
   overflow-x: auto;
@@ -416,6 +391,19 @@ header h2 {
   border: 1px solid var(--border-color);
   padding: 8px 10px;
   text-align: center;
+}
+
+.zombie-total-header {
+  background-color: var(--table-header-bg);
+  color: #9c27b0; /* Zombie color */
+  font-weight: bold;
+}
+
+.zombie-total-cell {
+  background-color: var(--table-stripe-bg);
+  border-top: 2px solid var(--border-color);
+  text-align: center;
+  display: table-cell !important;
 }
 
 .winrate-table th {
@@ -440,26 +428,31 @@ header h2 {
 .winrate-cell {
   position: relative;
   height: 60px;
-  width: 60px;
+  width: 80px;
   text-align: center;
+  vertical-align: middle;
+  display: table-cell !important;
 }
 
 .single-winrate {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  display: table-cell !important;
   padding: 5px;
+  height: 60px;
+  width: 80px;
+  vertical-align: middle;
+  text-align: center;
 }
 
 .cell-winrate {
   font-size: 1rem;
   font-weight: bold;
+  display: block;
 }
 
 .cell-games {
   font-size: 0.75rem;
   opacity: 0.8;
+  display: block;
 }
 
 /* Legacy diagonal cell styles - kept for reference */
@@ -512,9 +505,10 @@ header h2 {
 }
 
 .show-more-container {
-  position: absolute;
-  top: 15px;
-  right: 15px;
+  position: relative;
+  text-align: right;
+  margin-top: 8px;
+  margin-bottom: 30px;
 }
 
 .show-more-btn, .show-less-btn {
@@ -583,7 +577,7 @@ header h2 {
 .player-stats-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 30px;
+  margin-bottom: 10px;
 }
 
 .player-stats-table th,

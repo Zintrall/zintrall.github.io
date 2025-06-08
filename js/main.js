@@ -233,7 +233,7 @@ async function generateReport() {
     document.getElementById('loading-spinner').style.display = 'flex';
     document.getElementById('no-data-message').style.display = 'none';
     document.getElementById('data-container').style.display = 'none';
-    
+        
     try {
         // Get selected filters
         const selectedPatches = getSelectedPatches();
@@ -241,28 +241,27 @@ async function generateReport() {
         const selectedPlayers = getSelectedPlayers();
         const { startDate, endDate } = getCustomDateRange();
         const dataType = document.querySelector('input[name="data-type"]:checked').value;
-        
+            
         // Load game data
         await gameData.loadData(selectedPatches, selectedTournaments, startDate, endDate);
-        
+            
         // Process data based on selected display type
         if (dataType === 'players-default') {
             const filteredGames = gameData.filterGamesForPlayers(selectedPlayers);
             await displayHeroWinrates(filteredGames);
             await displayPlayerRankings(filteredGames);
+            // Show player rankings tab
+            document.querySelector('.tab-btn[data-tab="player-winrate"]').style.display = 'block';
         } else if (dataType === 'player-stats') {
-            if (selectedPlayers.length === 1) {
-                await displayPlayerStatsModal(selectedPlayers[0]);
-            } else {
-                alert('Please select a player to view their stats');
-                document.getElementById('loading-spinner').style.display = 'none';
-                document.getElementById('no-data-message').style.display = 'flex';
-                return;
-            }
+            await displayPlayerStatsModal(selectedPlayers[0]); // Will show error message if no player selected
+            // Hide player rankings tab in player stats view
+            document.querySelector('.tab-btn[data-tab="player-winrate"]').style.display = 'none';
         } else if (dataType === 'custom-battles') {
             const battleGames = gameData.getMatchesBetweenPlayers(selectedPlayers);
             await displayHeroWinrates(battleGames);
             await displayPlayerRankings(battleGames);
+            // Show player rankings tab
+            document.querySelector('.tab-btn[data-tab="player-winrate"]').style.display = 'block';
         }
         
         // Show data container
@@ -327,6 +326,15 @@ async function generateDeckReport() {
 
 // Display hero winrates in the table
 async function displayHeroWinrates(games) {
+    // If no games data, show message and return
+    if (!games || games.length === 0) {
+        document.getElementById('no-data-message').style.display = 'flex';
+        document.getElementById('no-data-message').innerHTML = '<p>No game data available for the selected filters</p>';
+        document.getElementById('data-container').style.display = 'none';
+        document.getElementById('loading-spinner').style.display = 'none';
+        return;
+    }
+
     // Create temporary GameData object with just the filtered games
     const tempGameData = new GameData();
     tempGameData.games = games;
@@ -347,9 +355,6 @@ async function displayHeroWinrates(games) {
     
     // Get matchup data
     const matchupData = tempGameData.getHeroMatchupData();
-    
-    // Sort heroes - plants first, then zombies
-    const sortedHeroes = [...plantHeroes, ...zombieHeroes];
     
     // Create the table
     const table = document.getElementById('winrate-table');
@@ -396,6 +401,10 @@ async function displayHeroWinrates(games) {
         let totalPlantWins = 0;
         let totalMatchups = 0;
         
+        // Create all cells for this row at once to ensure proper horizontal layout
+        const cells = [];
+        
+        // Calculate all matchups first
         zombieHeroes.forEach(zombieHero => {
             const cell = document.createElement('td');
             cell.className = 'winrate-cell single-winrate';
@@ -425,8 +434,11 @@ async function displayHeroWinrates(games) {
                 cell.innerHTML = '<div style="text-align: center; line-height: 60px;">-</div>';
             }
             
-            row.appendChild(cell);
+            cells.push(cell);
         });
+        
+        // Add all cells to the row in proper order (horizontally)
+        cells.forEach(cell => row.appendChild(cell));
         
         // Total column
         const totalCell = document.createElement('td');
@@ -444,28 +456,26 @@ async function displayHeroWinrates(games) {
         tbody.appendChild(row);
     });
     
-    // Add zombie hero rows for their totals
+    // Add a row for zombie totals (horizontal)
+    const zombieTotalsRow = document.createElement('tr');
+    
+    // Add header cell for the row
+    const zombieTotalsHeader = document.createElement('th');
+    zombieTotalsHeader.textContent = 'Zombie Totals';
+    zombieTotalsHeader.className = 'zombie-total-header';
+    zombieTotalsRow.appendChild(zombieTotalsHeader);
+    
+    // Calculate zombie hero stats for each column (indexed by zombieHeroes array position)
+    let overallZombieWins = 0;
+    let overallZombieGames = 0;
+    let zombieStats = [];
+    
+    // Pre-calculate all zombie stats first
     zombieHeroes.forEach(zombieHero => {
-        const row = document.createElement('tr');
-        
-        // Row header (hero name)
-        const rowHeader = document.createElement('th');
-        rowHeader.className = 'zombie-hero';
-        rowHeader.textContent = getFullHeroName(zombieHero);
-        row.appendChild(rowHeader);
-        
-        // Calculate total zombie winrate against all plants
         let zombieWins = 0;
         let totalZombieGames = 0;
         
-        // Fill cells with dashes for zombie vs zombie matchups
-        zombieHeroes.forEach(() => {
-            const cell = document.createElement('td');
-            cell.innerHTML = '<div style="text-align: center; line-height: 60px;">-</div>';
-            row.appendChild(cell);
-        });
-        
-        // Calculate zombie hero stats from all matchups
+        // Calculate stats for this zombie hero against all plants
         plantHeroes.forEach(plantHero => {
             const zombieMatchup = matchupData[zombieHero][plantHero] || { wins: 0, total: 0 };
             const plantMatchup = matchupData[plantHero][zombieHero] || { wins: 0, total: 0 };
@@ -474,21 +484,50 @@ async function displayHeroWinrates(games) {
             totalZombieGames += zombieMatchup.total + plantMatchup.wins;
         });
         
-        // Total column for zombie
-        const totalCell = document.createElement('td');
+        // Store stats for this zombie
+        zombieStats.push({
+            hero: zombieHero,
+            wins: zombieWins,
+            total: totalZombieGames
+        });
         
-        if (totalZombieGames > 0) {
-            const zombieWinRate = (zombieWins / totalZombieGames) * 100;
-            totalCell.innerHTML = `<div>${zombieWinRate.toFixed(1)}%</div><div>(${zombieWins}/${totalZombieGames})</div>`;
-            totalCell.style.backgroundColor = getWinrateColor(zombieWinRate);
-            totalCell.style.color = zombieWinRate > 50 ? '#000' : '#fff';
+        // Add to overall totals
+        overallZombieWins += zombieWins;
+        overallZombieGames += totalZombieGames;
+    });
+    
+    // Now populate the cells in proper order
+    zombieStats.forEach(stat => {
+        const cell = document.createElement('td');
+        cell.className = 'zombie-total-cell';
+        
+        if (stat.total > 0) {
+            const zombieWinRate = (stat.wins / stat.total) * 100;
+            cell.innerHTML = `<div class="cell-winrate">${zombieWinRate.toFixed(1)}%</div>
+                              <div class="cell-games">(${stat.wins}/${stat.total})</div>`;
+            cell.style.backgroundColor = getWinrateColor(zombieWinRate);
         } else {
-            totalCell.textContent = '-';
+            cell.innerHTML = '<div style="text-align: center; line-height: 60px;">-</div>';
         }
         
-        row.appendChild(totalCell);
-        tbody.appendChild(row);
+        zombieTotalsRow.appendChild(cell);
     });
+    
+    // Add overall zombie total cell
+    const overallZombieTotalCell = document.createElement('td');
+    if (overallZombieGames > 0) {
+        const overallZombieWinRate = (overallZombieWins / overallZombieGames) * 100;
+        overallZombieTotalCell.innerHTML = `<div>${overallZombieWinRate.toFixed(1)}%</div>
+                                            <div>(${overallZombieWins}/${overallZombieGames})</div>`;
+        overallZombieTotalCell.style.backgroundColor = getWinrateColor(overallZombieWinRate);
+        overallZombieTotalCell.style.color = overallZombieWinRate > 50 ? '#000' : '#fff';
+    } else {
+        overallZombieTotalCell.textContent = '-';
+    }
+    zombieTotalsRow.appendChild(overallZombieTotalCell);
+    
+    // Add the zombie totals row to the table
+    tbody.appendChild(zombieTotalsRow);
     
     table.appendChild(tbody);
 }
@@ -587,28 +626,50 @@ function displayRankingTable(tableId, rankings, sortKey) {
 
 // Display player stats in main content area
 async function displayPlayerStatsModal(playerName) {
-    // Get player data
-    const playerGames = gameData.getPlayerGames(playerName);
-    const heroStats = gameData.getPlayerHeroStats(playerName);
-    const deckStats = gameData.getPlayerDeckStats(playerName);
-    const heroMatchups = gameData.getPlayerHeroMatchups(playerName);
+  if (!playerName) {
+      // No player selected, show message
+      document.getElementById('loading-spinner').style.display = 'none';
+      document.getElementById('no-data-message').style.display = 'flex';
+      document.getElementById('no-data-message').innerHTML = '<p>Please select a player to view their stats</p>';
+      document.getElementById('data-container').style.display = 'none';
+      return;
+  }
+
+  // Get player data
+  const playerGames = gameData.getPlayerGames(playerName);
+  const heroStats = gameData.getPlayerHeroStats(playerName);
+  const deckStats = gameData.getPlayerDeckStats(playerName);
+  const heroMatchups = gameData.getPlayerHeroMatchups(playerName);
     
-    // Calculate overall stats
-    const totalGames = playerGames.length;
-    const wins = playerGames.filter(game => game.winner.toLowerCase() === playerName.toLowerCase()).length;
-    const winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0;
+  // Calculate overall stats
+  const totalGames = playerGames.length;
+  const wins = playerGames.filter(game => game.winner.toLowerCase() === playerName.toLowerCase()).length;
+  const winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0;
     
-    // Get container for the data
-    document.getElementById('data-container').style.display = 'block';
+  // Get container for the data
+  document.getElementById('data-container').style.display = 'block';
+  document.getElementById('no-data-message').style.display = 'none';
     
-    // Select the first tab and make it active
-    document.querySelector('.tab-btn[data-tab="hero-winrate"]').click();
+  // Select the hero-winrate tab and make it active
+  document.querySelectorAll('.tab-btn').forEach(tab => {
+      if (tab.getAttribute('data-tab') === 'hero-winrate') {
+          tab.click();
+      }
+      // Hide player rankings tab for player stats view
+      if (tab.getAttribute('data-tab') === 'player-winrate') {
+          tab.style.display = 'none';
+      }
+  });
     
-    // Get the hero-winrate tab content
-    const heroWinrateTab = document.getElementById('hero-winrate');
+  // Get the hero-winrate tab content
+  const heroWinrateTab = document.getElementById('hero-winrate');
+  if (!heroWinrateTab) {
+      console.error("Cannot find hero-winrate tab content");
+      return;
+  }
     
-    // Clear the content
-    heroWinrateTab.innerHTML = '';
+  // Clear the content
+  heroWinrateTab.innerHTML = '';
     
     // Create content
     let content = `
@@ -649,12 +710,12 @@ async function displayPlayerStatsModal(playerName) {
     // Sort heroes by winrate (descending)
     const bestWinrateHeroes = Object.entries(heroStats)
         .filter(([_, stats]) => stats.played >= 3) // Only consider heroes with at least 3 games
-        .sort((a, b) => b[1].winRate - a[1].winRate)
-        .slice(0, 10); // Take top 10
+        .sort((a, b) => b[1].winRate - a[1].winRate);
     
-    bestWinrateHeroes.forEach(([hero, stats]) => {
+    bestWinrateHeroes.forEach(([hero, stats], index) => {
+        const isHidden = index >= 10 ? 'style="display:none"' : '';
         content += `
-            <tr>
+            <tr ${isHidden}>
                 <td>${getFullHeroName(hero)}</td>
                 <td>${stats.played}</td>
                 <td>${stats.wins}</td>
@@ -669,6 +730,10 @@ async function displayPlayerStatsModal(playerName) {
     content += `
             </tbody>
         </table>
+        <div class="show-more-container">
+            <button id="show-more-best-heroes" class="show-more-btn">Show More</button>
+            <button id="show-less-best-heroes" class="show-less-btn" style="display: none;">Show Less</button>
+        </div>
         
         <h3>Most Played Heroes</h3>
         <table class="player-stats-table">
@@ -686,12 +751,12 @@ async function displayPlayerStatsModal(playerName) {
     
     // Sort heroes by games played
     const mostPlayedHeroes = Object.entries(heroStats)
-        .sort((a, b) => b[1].played - a[1].played)
-        .slice(0, 10); // Take top 10
+        .sort((a, b) => b[1].played - a[1].played);
     
-    mostPlayedHeroes.forEach(([hero, stats]) => {
+    mostPlayedHeroes.forEach(([hero, stats], index) => {
+        const isHidden = index >= 10 ? 'style="display:none"' : '';
         content += `
-            <tr>
+            <tr ${isHidden}>
                 <td>${getFullHeroName(hero)}</td>
                 <td>${stats.played}</td>
                 <td>${stats.wins}</td>
@@ -706,12 +771,15 @@ async function displayPlayerStatsModal(playerName) {
     content += `
             </tbody>
         </table>
+        <div class="show-more-container">
+            <button id="show-more-most-played" class="show-more-btn">Show More</button>
+            <button id="show-less-most-played" class="show-less-btn" style="display: none;">Show Less</button>
+        </div>
         
-        <h3>Most Difficult Matchups</h3>
+        <h3>Heroes You Lose Most Against</h3>
         <table class="player-stats-table">
             <thead>
                 <tr>
-                    <th>Player's Hero</th>
                     <th>Opponent Hero</th>
                     <th>Games</th>
                     <th>Wins</th>
@@ -722,35 +790,66 @@ async function displayPlayerStatsModal(playerName) {
             <tbody>
     `;
     
-    // Calculate difficult matchups - Get all player's heroes and their matchups
-    let difficultMatchups = [];
+    // Calculate heroes the player loses most against - count losses against each opponent hero
+    const heroLossCounts = {};
     
-    // Process hero matchups data
-    for (const ownHero in heroMatchups) {
-        for (const oppHero in heroMatchups[ownHero]) {
-            const matchup = heroMatchups[ownHero][oppHero];
-            if (matchup.played >= 3) { // Only consider matchups with at least 3 games
-                difficultMatchups.push({
-                    ownHero,
-                    oppHero,
-                    ...matchup
-                });
+    // Process all games to count losses against each hero
+    playerGames.forEach(game => {
+        // If player is the loser, count the hero they lost to
+        if (game.loser.toLowerCase() === playerName.toLowerCase()) {
+            const oppHero = game.winningHero;
+            if (!heroLossCounts[oppHero]) {
+                heroLossCounts[oppHero] = {
+                    played: 0,
+                    losses: 0,
+                    wins: 0,
+                    winRate: 0
+                };
             }
+            heroLossCounts[oppHero].played++;
+            heroLossCounts[oppHero].losses++;
+        } else if (game.winner.toLowerCase() === playerName.toLowerCase()) {
+            // If player won, add it to the count of games played against this hero
+            const oppHero = game.losingHero;
+            if (!heroLossCounts[oppHero]) {
+                heroLossCounts[oppHero] = {
+                    played: 0,
+                    losses: 0,
+                    wins: 0,
+                    winRate: 0
+                };
+            }
+            heroLossCounts[oppHero].played++;
+            heroLossCounts[oppHero].wins++;
+        }
+    });
+    
+    // Calculate winrates and create matchup array
+    let difficultMatchups = [];
+    for (const oppHero in heroLossCounts) {
+        const stats = heroLossCounts[oppHero];
+        if (stats.played >= 3) { // Only consider matchups with at least 3 games
+            stats.winRate = (stats.wins / stats.played) * 100;
+            difficultMatchups.push({
+                oppHero,
+                ...stats
+            });
         }
     }
     
-    // Sort by winrate (ascending)
+    // Sort by winrate (ascending) to show heroes the player loses to most
     difficultMatchups.sort((a, b) => a.winRate - b.winRate);
     
-    // Take 10 worst matchups
-    difficultMatchups.slice(0, 10).forEach(matchup => {
+    // Display all matchups, we'll control visibility with show more/less
+    // Display worst matchups (heroes the player loses most to)
+    difficultMatchups.forEach((matchup, index) => {
+        const isHidden = index >= 10 ? 'style="display:none"' : '';
         content += `
-            <tr>
-                <td>${getFullHeroName(matchup.ownHero)}</td>
+            <tr ${isHidden} class="matchup-row">
                 <td>${getFullHeroName(matchup.oppHero)}</td>
                 <td>${matchup.played}</td>
                 <td>${matchup.wins}</td>
-                <td>${matchup.played - matchup.wins}</td>
+                <td>${matchup.losses}</td>
                 <td style="color: ${matchup.winRate >= 50 ? 'var(--light-green)' : 'var(--orange)'}">
                     ${matchup.winRate.toFixed(1)}%
                 </td>
@@ -761,10 +860,51 @@ async function displayPlayerStatsModal(playerName) {
     content += `
             </tbody>
         </table>
+        <div class="show-more-container">
+            <button id="show-more-matchups" class="show-more-btn">Show More</button>
+            <button id="show-less-matchups" class="show-less-btn" style="display: none;">Show Less</button>
+        </div>
     `;
     
     // Fill the container
     heroWinrateTab.innerHTML = content;
+    
+    // Add event listeners for the show more/less buttons
+    document.getElementById('show-more-best-heroes').addEventListener('click', function() {
+        showAllRows('player-stats-table', 0);
+        this.style.display = 'none';
+        document.getElementById('show-less-best-heroes').style.display = 'inline-block';
+    });
+    
+    document.getElementById('show-less-best-heroes').addEventListener('click', function() {
+        hideRowsAfter('player-stats-table', 0, 10);
+        this.style.display = 'none';
+        document.getElementById('show-more-best-heroes').style.display = 'inline-block';
+    });
+    
+    document.getElementById('show-more-most-played').addEventListener('click', function() {
+        showAllRows('player-stats-table', 1);
+        this.style.display = 'none';
+        document.getElementById('show-less-most-played').style.display = 'inline-block';
+    });
+    
+    document.getElementById('show-less-most-played').addEventListener('click', function() {
+        hideRowsAfter('player-stats-table', 1, 10);
+        this.style.display = 'none';
+        document.getElementById('show-more-most-played').style.display = 'inline-block';
+    });
+    
+    document.getElementById('show-more-matchups').addEventListener('click', function() {
+        showAllRows('player-stats-table', 2);
+        this.style.display = 'none';
+        document.getElementById('show-less-matchups').style.display = 'inline-block';
+    });
+    
+    document.getElementById('show-less-matchups').addEventListener('click', function() {
+        hideRowsAfter('player-stats-table', 2, 10);
+        this.style.display = 'none';
+        document.getElementById('show-more-matchups').style.display = 'inline-block';
+    });
     
     // Hide loading spinner
     document.getElementById('loading-spinner').style.display = 'none';
@@ -878,6 +1018,31 @@ function displayDeckStats(deckStats) {
                 this.classList.remove('expanded');
             }
         });
+    });
+}
+
+// Helper functions for showing/hiding rows
+function showAllRows(tableClass, tableIndex) {
+    // Get all tables with this class
+    const tables = document.getElementsByClassName(tableClass);
+    if (tables.length <= tableIndex) return;
+    
+    const rows = tables[tableIndex].querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        row.style.display = '';
+    });
+}
+
+function hideRowsAfter(tableClass, tableIndex, rowLimit) {
+    // Get all tables with this class
+    const tables = document.getElementsByClassName(tableClass);
+    if (tables.length <= tableIndex) return;
+    
+    const rows = tables[tableIndex].querySelectorAll('tbody tr');
+    rows.forEach((row, index) => {
+        if (index >= rowLimit) {
+            row.style.display = 'none';
+        }
     });
 }
 
