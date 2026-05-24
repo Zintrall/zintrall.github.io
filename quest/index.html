@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Quest Online</title>
+  <meta name="description" content="Play Quest Online with your friends — a self-hosted social deduction game."/>
+  <link href="https://fonts.googleapis.com/css2?family=Muli:wght@400;600;700;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  VIEW: CONNECT                                            -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="view-connect" class="view active">
+  <div class="connect-card">
+    <h1 class="game-title">Quest</h1>
+    <p class="subtitle">A game of loyalty and deception</p>
+    <div class="form-group">
+      <label for="input-ip">Server IP</label>
+      <input id="input-ip" type="text" placeholder="192.168.1.100" autocomplete="off"/>
+    </div>
+    <div class="form-group">
+      <label for="input-port">Port</label>
+      <input id="input-port" type="number" value="3000" min="1" max="65535"/>
+    </div>
+    <div class="form-group">
+      <label for="input-name">Your Name</label>
+      <input id="input-name" type="text" maxlength="20" placeholder="Letters and spaces only" autocomplete="off"/>
+    </div>
+    <button id="btn-join" class="btn btn-primary btn-large">Join Game</button>
+    <p id="connect-error" class="error-msg hidden"></p>
+  </div>
+  <p class="version-note">Quest Online — self-hosted edition</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  VIEW: LOBBY                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="view-lobby" class="view">
+  <div class="lobby-header">
+    <h2>Waiting for Players…</h2>
+    <p id="lobby-count" class="lobby-count"></p>
+    <p class="lobby-hint">Minimum 4 players required. All must click Ready.</p>
+  </div>
+  <div id="lobby-players" class="player-grid"></div>
+  <div class="lobby-actions">
+    <button id="btn-ready" class="btn btn-primary">Ready</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  VIEW: ROLE REVEAL                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="view-role" class="view">
+  <div class="role-card-scene">
+    <div id="role-card" class="role-card">
+      <div class="role-card-front"><p>Your Role</p></div>
+      <div class="role-card-back">
+        <div id="role-team-badge" class="role-team-badge"></div>
+        <h2 id="role-name"></h2>
+        <p id="role-desc"></p>
+        <div id="role-knowledge" class="role-knowledge hidden"></div>
+      </div>
+    </div>
+  </div>
+  <button id="btn-role-ok" class="btn btn-primary">Got it!</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  VIEW: GAME (persistent shell)                           -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="view-game" class="view">
+
+  <!-- Top bar -->
+  <div class="game-topbar">
+    <div class="topbar-left">
+      <span id="tb-name" class="tb-name"></span>
+      <span id="tb-role" class="tb-role"></span>
+    </div>
+  </div>
+
+  <!-- Quest track -->
+  <div id="quest-track" class="quest-track"></div>
+
+  <!-- Player roster -->
+  <div id="player-roster" class="player-roster"></div>
+
+  <!-- Action panels (only one shown at a time) -->
+  <div id="action-area" class="action-area">
+
+    <div id="panel-waiting" class="panel hidden">
+      <p id="waiting-msg" class="waiting-msg">Waiting…</p>
+    </div>
+
+    <div id="panel-leader-select" class="panel hidden">
+      <h3 id="ls-title"></h3>
+      <p id="ls-hint" class="hint-text"></p>
+      <div id="ls-players" class="select-grid"></div>
+      <div id="ls-token-row" class="token-row hidden">
+        <p class="hint-text">Give the Magic Token to a team member (optional):</p>
+        <div id="ls-token-players" class="select-grid"></div>
+        <button id="btn-token-none" class="btn btn-ghost">No Token</button>
+      </div>
+      <button id="btn-confirm-team" class="btn btn-primary" disabled>Confirm Team</button>
+    </div>
+
+    <div id="panel-voting" class="panel hidden">
+      <h3>Cast Your Vote</h3>
+      <p id="vote-hint" class="hint-text"></p>
+      <div class="vote-buttons">
+        <button id="btn-vote-success" class="btn btn-success btn-xlarge">✔ Success</button>
+        <button id="btn-vote-fail"    class="btn btn-fail    btn-xlarge">✘ Fail</button>
+      </div>
+      <p id="vote-submitted-msg" class="hidden waiting-msg">Vote submitted. Waiting for others…</p>
+    </div>
+
+    <div id="panel-quest-result" class="panel hidden">
+      <h3 id="qr-title"></h3>
+      <div id="qr-tokens" class="qr-tokens"></div>
+      <p id="qr-counts"></p>
+    </div>
+
+    <div id="panel-next-leader" class="panel hidden">
+      <h3>Choose the Next Leader</h3>
+      <div class="nl-section">
+        <p class="hint-text">Next Leader (cannot be a veteran):</p>
+        <div id="nl-leader-list" class="select-grid"></div>
+      </div>
+      <button id="btn-confirm-nl" class="btn btn-primary" disabled>Confirm</button>
+    </div>
+
+    <div id="panel-amulet-selection" class="panel hidden">
+      <h3>Give the Amulet</h3>
+      <p class="hint-text">Give Amulet to (optional, cannot be veteran or already hold one):</p>
+      <div id="as-amulet-list" class="select-grid"></div>
+      <button id="btn-as-no-amulet" class="btn btn-ghost">No Amulet</button>
+      <button id="btn-confirm-as" class="btn btn-primary" disabled>Confirm</button>
+    </div>
+
+    <div id="panel-amulet-check" class="panel hidden">
+      <h3>🔮 You hold the Amulet</h3>
+      <p class="hint-text">Choose a player to investigate their loyalty:</p>
+      <div id="ac-players" class="select-grid"></div>
+      <button id="btn-confirm-ac" class="btn btn-primary" disabled>Investigate</button>
+      <div id="ac-result" class="amulet-result hidden"></div>
+    </div>
+
+    <div id="panel-trickster" class="panel hidden">
+      <h3>You Are Being Investigated</h3>
+      <p class="hint-text">As the Trickster, you may choose to lie about your loyalty:</p>
+      <div class="vote-buttons">
+        <button id="btn-trickster-truth" class="btn btn-success">Tell the Truth</button>
+        <button id="btn-trickster-lie"   class="btn btn-fail">Lie (say you are Good)</button>
+      </div>
+    </div>
+
+    <div id="panel-final-discussion" class="panel hidden">
+      <h3 class="final-title">⚔ The Final Quest Approaches</h3>
+      <div id="revealer-notice" class="revealer-notice hidden"></div>
+      <div id="changeling-notice" class="changeling-notice hidden"></div>
+      <div class="timer-block">
+        <div id="discussion-timer" class="timer">5:00</div>
+        <p class="hint-text">Discuss freely. When everyone is ready, the voting begins.</p>
+      </div>
+      <button id="btn-final-ready" class="btn btn-primary">I'm Ready to Vote</button>
+      <div id="final-ready-list" class="player-grid small-grid"></div>
+    </div>
+
+    <div id="panel-hunt" class="panel hidden">
+      <h3>🏹 The Hunt</h3>
+      <p class="hint-text">You are the Blind Hunter. Activate the Hunt?</p>
+      <div class="vote-buttons">
+        <button id="btn-hunt-activate" class="btn btn-fail">Start the Hunt</button>
+        <button id="btn-hunt-skip"     class="btn btn-ghost">Move on to the Vote</button>
+      </div>
+      <div id="hunt-guess-section" class="hidden">
+        <p class="hint-text">Identify two good players and their <strong>exact</strong> roles:</p>
+        <div id="hunt-guesses">
+          <div class="hunt-guess-row" data-idx="0">
+            <select class="hunt-player-select"></select>
+            <select class="hunt-role-select"></select>
+          </div>
+          <div class="hunt-guess-row" data-idx="1">
+            <select class="hunt-player-select"></select>
+            <select class="hunt-role-select"></select>
+          </div>
+        </div>
+        <button id="btn-hunt-confirm" class="btn btn-fail">Confirm Hunt</button>
+      </div>
+    </div>
+
+    <div id="panel-final-voting" class="panel hidden">
+      <h3>Final Quest Vote</h3>
+      <p id="fv-hint" class="hint-text"></p>
+      <p class="hint-text">Select the players you believe are <strong>Evil</strong>:</p>
+      <div id="fv-players" class="select-grid"></div>
+      <button id="btn-confirm-fv" class="btn btn-primary" disabled>Submit Guesses</button>
+      <p id="fv-submitted-msg" class="hidden waiting-msg">Guesses submitted. Waiting…</p>
+    </div>
+
+
+
+  </div><!-- /action-area -->
+</div><!-- /view-game -->
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  VIEW: GAME OVER                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="view-gameover" class="view">
+  <div class="gameover-banner" id="gameover-banner">
+    <h1 id="gameover-title"></h1>
+    <p id="gameover-reason"></p>
+  </div>
+  <div id="go-quest-track" class="quest-track"></div>
+  <h3 class="roles-reveal-title">All Roles Revealed</h3>
+  <div id="roles-reveal" class="player-grid"></div>
+  <button id="btn-play-again" class="btn btn-primary btn-large">Back to Lobby</button>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

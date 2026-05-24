@@ -3,46 +3,370 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Site Moved</title>
+        <title>Zintrall</title>
         <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            html,
+            body,
+            .wrap {
+                height: 100%;
+            }
+
             body {
-                font-family: Arial, sans-serif;
-                text-align: center;
-                margin-top: 100px;
-                background-color: #f5f5f5;
+                font-family:
+                    "Nunito", "Quicksand", "Segoe UI", "Arial Rounded MT Bold",
+                    Arial, sans-serif;
+                background: #0d2818;
+                background-image: radial-gradient(
+                    circle at center,
+                    #22c55e 0%,
+                    #1a5f47 15%,
+                    #0d2818 60%
+                );
+                overflow: hidden;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+                position: relative;
+                min-height: 100vh;
             }
+
+            .wrap {
+                transform-style: preserve-3d;
+                perspective: 800px;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 0;
+            }
+
+            .tri {
+                height: 0;
+                width: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+            }
+
+            .tri:nth-child(1) {
+                border-top: 30px solid hsla(120, 100%, 50%, 1);
+                border-right: 30px solid transparent;
+                border-left: 30px solid transparent;
+                margin-left: -30px;
+                margin-top: -30px;
+                filter: grayscale(1);
+                transform: rotate(45deg) translate3d(0, 0, -1500px) scale(0);
+                animation: anim1 10s infinite linear;
+                animation-delay: -0.05s;
+                opacity: 0;
+            }
+            @keyframes anim1 {
+                0% {
+                    opacity: 1;
+                    transform: rotate(67.5deg) translate3d(850px, 750px, 1000px)
+                        scale(1);
+                }
+            }
+
+            .tri:nth-child(2) {
+                border-top: 21px solid hsla(200, 100%, 50%, 1);
+                border-right: 21px solid transparent;
+                border-left: 21px solid transparent;
+                margin-left: -21px;
+                margin-top: -21px;
+                filter: grayscale(1);
+                transform: rotate(180deg) translate3d(0, 0, -1500px) scale(0);
+                animation: anim2 10s infinite linear;
+                animation-delay: -0.1s;
+                opacity: 0;
+            }
+            @keyframes anim2 {
+                0% {
+                    opacity: 1;
+                    transform: rotate(270deg) translate3d(920px, 150px, 1000px)
+                        scale(1);
+                }
+            }
+
+            .tri:nth-child(3) {
+                border-top: 42px solid hsla(340, 100%, 50%, 1);
+                border-right: 42px solid transparent;
+                border-left: 42px solid transparent;
+                margin-left: -42px;
+                margin-top: -42px;
+                filter: grayscale(1);
+                transform: rotate(270deg) translate3d(0, 0, -1500px) scale(0);
+                animation: anim3 10s infinite linear;
+                animation-delay: -0.15s;
+                opacity: 0;
+            }
+            @keyframes anim3 {
+                0% {
+                    opacity: 1;
+                    transform: rotate(405deg) translate3d(620px, 480px, 1000px)
+                        scale(1);
+                }
+            }
+
+            .tri:nth-child(4) {
+                border-top: 19px solid hsla(60, 100%, 50%, 1);
+                border-right: 19px solid transparent;
+                border-left: 19px solid transparent;
+                margin-left: -19px;
+                margin-top: -19px;
+                filter: grayscale(1);
+                transform: rotate(135deg) translate3d(0, 0, -1500px) scale(0);
+                animation: anim4 10s infinite linear;
+                animation-delay: -0.2s;
+                opacity: 0;
+            }
+            @keyframes anim4 {
+                0% {
+                    opacity: 1;
+                    transform: rotate(202.5deg)
+                        translate3d(250px, 920px, 1000px) scale(1);
+                }
+            }
+
+            .tri:nth-child(5) {
+                border-top: 38px solid hsla(280, 100%, 50%, 1);
+                border-right: 38px solid transparent;
+                border-left: 38px solid transparent;
+                margin-left: -38px;
+                margin-top: -38px;
+                filter: grayscale(1);
+                transform: rotate(90deg) translate3d(0, 0, -1500px) scale(0);
+                animation: anim5 10s infinite linear;
+                animation-delay: -0.25s;
+                opacity: 0;
+            }
+            @keyframes anim5 {
+                0% {
+                    opacity: 1;
+                    transform: rotate(135deg) translate3d(530px, 310px, 1000px)
+                        scale(1);
+                }
+            }
+
             .container {
+                background: rgba(15, 30, 25, 0.85);
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+                padding: 50px 40px;
                 max-width: 600px;
-                margin: 0 auto;
-                padding: 40px;
-                background-color: white;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                width: 100%;
+                position: relative;
+                z-index: 1;
+                border: 1px solid rgba(34, 197, 94, 0.2);
+                backdrop-filter: blur(10px);
             }
+
+            .profile-section {
+                text-align: center;
+                margin-bottom: 50px;
+            }
+
+            .profile-pic {
+                width: 140px;
+                height: 140px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 3px solid #22c55e;
+                margin-bottom: 25px;
+                transition: transform 0.3s ease;
+            }
+
             h1 {
-                color: #333;
-                margin-bottom: 20px;
+                color: #22c55e;
+                font-size: 2.8em;
+                margin-bottom: 10px;
+                font-weight: 700;
+                letter-spacing: 1px;
             }
-            a {
-                color: #007bff;
+
+            .subtitle {
+                color: #86efac;
+                font-size: 1.1em;
+                font-weight: 300;
+                letter-spacing: 2px;
+            }
+
+            .projects-section h2 {
+                color: #22c55e;
+                margin-bottom: 30px;
+                font-size: 2em;
+                letter-spacing: 1px;
+            }
+
+            .project-tree {
+                margin-left: 0;
+            }
+
+            .project-item {
+                margin-bottom: 25px;
+                padding: 20px;
+                background: rgba(34, 197, 94, 0.08);
+                border-left: 4px solid #22c55e;
+                border-radius: 6px;
+                transition: all 0.3s ease;
+            }
+
+            .project-name {
+                color: #86efac;
+                font-weight: 700;
+                font-size: 1.3em;
+                margin-bottom: 12px;
+            }
+
+            .project-links {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .project-links a {
+                display: inline-block;
+                padding: 10px 20px;
+                background: #22c55e;
+                color: #0d2818;
                 text-decoration: none;
-                font-size: 18px;
+                border-radius: 6px;
+                transition: all 0.2s ease;
+                font-size: 0.95em;
+                font-weight: 600;
+                border: none;
             }
-            a:hover {
-                text-decoration: underline;
+
+            .project-links a:hover {
+                background: #16a34a;
+            }
+
+            .project-links a.repo {
+                background: #1f2937;
+                color: #86efac;
+                border: 1px solid #22c55e;
+            }
+
+            .project-links a.repo:hover {
+                background: #111827;
             }
         </style>
     </head>
     <body>
-        <div class="container">
-            <h1>Site Moved</h1>
-            <p>This site has moved to a new location.</p>
-            <p>
-                New site at:
-                <a href="https://PvZH-Winrates.github.io"
-                    >PvZH-Winrates.github.io</a
-                >
-            </p>
+        <div class="wrap">
+            <div class="tri"></div>
+            <div class="tri"></div>
+            <div class="tri"></div>
+            <div class="tri"></div>
+            <div class="tri"></div>
+            <div class="tri"></div>
+            <div class="tri"></div>
+            <div class="tri"></div>
+            <div class="tri"></div>
+            <div class="tri"></div>
         </div>
+
+        <div class="container">
+            <!-- Profile Section -->
+            <div class="profile-section">
+                <img
+                    src="https://avatars.githubusercontent.com/u/94037567"
+                    class="profile-pic"
+                />
+                <h1>Zintrall</h1>
+            </div>
+
+            <!-- Projects Section -->
+            <div class="projects-section">
+                <h2>Projects</h2>
+                <div class="project-tree">
+                    <!-- Quest Online Project -->
+                    <div class="project-item">
+                        <div class="project-name">Quest Online</div>
+                        <div class="project-links">
+                            <a
+                                href="https://zintrall.github.io/quest"
+                                target="_blank"
+                                >Visit Site</a
+                            >
+                            <!--<a
+                                href="https://github.com/Zintrall/quest"
+                                target="_blank"
+                                class="repo"
+                                >GitHub Repo</a
+                            >-->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const triangles = document.querySelectorAll(".tri");
+            const colors = [
+                "120",
+                "200",
+                "340",
+                "60",
+                "280",
+                "30",
+                "150",
+                "250",
+                "45",
+                "320",
+            ];
+
+            triangles.forEach((tri, index) => {
+                const size = Math.random() * 40 + 15;
+                const duration = Math.random() * 3 + 3;
+                const delay = Math.random() * duration;
+                const randomX = Math.random() * 1000 - 500;
+                const randomY = Math.random() * 1000 - 500;
+                const randomRotate = Math.random() * 360;
+                const randomScale = Math.random() * 1.5 + 0.5;
+                const initialRotate = Math.random() * 360;
+
+                // Set triangle styles
+                tri.style.borderTop = `${size}px solid hsla(${colors[index % colors.length]}, 100%, 50%, 1)`;
+                tri.style.borderRight = `${size}px solid transparent`;
+                tri.style.borderLeft = `${size}px solid transparent`;
+                tri.style.marginLeft = `-${size / 2}px`;
+                tri.style.marginTop = `-${size / 2}px`;
+
+                // Create unique animation for each triangle
+                const keyframes = `
+                    @keyframes anim${index} {
+                        0% {
+                            opacity: 1;
+                            transform: rotate(${initialRotate}deg) translate3d(${randomX}px, ${randomY}px, 1000px) scale(${randomScale});
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: rotate(${initialRotate + randomRotate}deg) translate3d(${randomX * 0.5}px, ${randomY * 0.5}px, -1000px) scale(0);
+                        }
+                    }
+                `;
+
+                // Add keyframes to document
+                const style = document.createElement("style");
+                style.textContent = keyframes;
+                document.head.appendChild(style);
+
+                // Apply animation
+                tri.style.animation = `anim${index} ${duration}s infinite linear`;
+                tri.style.animationDelay = `-${delay}s`;
+                tri.style.opacity = "0";
+                tri.style.filter = "grayscale(1)";
+                tri.style.transform = `rotate(${initialRotate}deg) translate3d(0,0,-1500px) scale(0)`;
+            });
+        </script>
     </body>
 </html>
