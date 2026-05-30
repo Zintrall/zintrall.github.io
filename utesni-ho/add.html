@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="cs">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Utesni Ho — Přidat server</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <header class="site-header">
+            <div class="container">
+                <h1>Utesni Ho — Přidat server</h1>
+                <p class="subtitle">
+                    Zadejte údaje o vašem serveru a zobrazte jej v seznamu
+                    aktivních serverů.
+                </p>
+                <div class="header-actions">
+                    <a class="button ghost" href="index.html">Zpět na seznam</a>
+                    <a class="button ghost" href="guide.html">Nápověda</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="container">
+            <section class="panel" id="formSection">
+                <h2>Nový server</h2>
+                <form id="serverForm" novalidate>
+                    <div class="field">
+                        <label for="serverName">Název serveru</label>
+                        <input
+                            id="serverName"
+                            name="serverName"
+                            type="text"
+                            required
+                        />
+                    </div>
+                    <div class="field">
+                        <label for="serverIp">IP adresa</label>
+                        <input
+                            id="serverIp"
+                            name="serverIp"
+                            type="text"
+                            required
+                        />
+                    </div>
+                    <div class="field">
+                        <label for="serverPlayers">Počet hráčů</label>
+                        <input
+                            id="serverPlayers"
+                            name="serverPlayers"
+                            type="number"
+                            min="0"
+                            max="128"
+                            step="1"
+                            required
+                        />
+                    </div>
+                    <button class="button primary" type="submit">
+                        Přidat server
+                    </button>
+                </form>
+                <p class="muted small">
+                    Nechte tuto kartu otevřenou, aby byl server veden jako
+                    aktivní.
+                </p>
+                <p id="status" class="status hidden" role="status"></p>
+            </section>
+
+            <section class="panel hidden" id="activeSection">
+                <h2>Váš server je aktivní</h2>
+                <div class="info-grid">
+                    <div>
+                        <span class="label">Název</span>
+                        <strong id="activeName">—</strong>
+                    </div>
+                    <div>
+                        <span class="label">IP adresa</span>
+                        <strong id="activeIp">—</strong>
+                    </div>
+                    <div class="field">
+                        <label for="updatePlayers">Počet hráčů</label>
+                        <div style="display: flex; gap: 0.5rem">
+                            <input
+                                id="updatePlayers"
+                                type="number"
+                                min="0"
+                                max="128"
+                                step="1"
+                            />
+                            <button
+                                class="button primary"
+                                id="updatePlayersBtn"
+                                type="button"
+                            >
+                                Aktualizovat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button class="button danger" id="serverOff" type="button">
+                    Vypnout server
+                </button>
+                <p class="muted small">
+                    Zavření karty odstraní server automaticky z databáze.
+                </p>
+            </section>
+        </main>
+
+        <script type="module" src="js/add.js"></script>
+    </body>
+</html>
